@@ -165,6 +165,7 @@ void FFT<F>::realFFT(const F* din, F* dout) const {
     dout[(n-k)*2] = (a - c) * half;
     dout[(n-k)*2+1] = (d - b) * half;
   }
+  dout[n+1] = -dout[n+1];
 }
 
 template<typename F>
@@ -197,5 +198,7 @@ void FFT<F>::realIFFT(const F* din, F* dout) const {
     dout[(n-k)*2] = a + d;
     dout[(n-k)*2+1] = c - b;
   }
+  dout[n] = din[n];
+  dout[n+1] = -din[n+1];
   transform(dout, dout, true);
 }
