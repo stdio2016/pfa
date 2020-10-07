@@ -16,4 +16,12 @@ public:
       d[i].resize(length);
     }
   }
+
+  inline int numberOfChannels() const {
+    return d.size();
+  }
+
+  inline size_t length() const {
+    return d[0].size();
+  }
 };
