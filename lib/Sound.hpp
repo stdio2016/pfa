@@ -3,7 +3,7 @@
 class Sound {
 public:
   // usage: sound.d[channel][time in samples]
-  std::vector<std::vector<double>> d;
+  std::vector<std::vector<float>> d;
   
   double sampleRate;
   
