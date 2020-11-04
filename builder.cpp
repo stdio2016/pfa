@@ -288,7 +288,7 @@ void processMusic(std::string name) {
     }
     #pragma omp critical
     printf("compute %s rms=%.2fdB peak=%d landmarks=%d\n", shortname.c_str(),
-      log10(totle) * 10, peaks.size()/2, lms);
+      log10(totle) * 10, (int)peaks.size()/2, lms);
 
     if (true) {
       tm.getRunTime();
