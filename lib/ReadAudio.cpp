@@ -39,6 +39,7 @@ Sound ReadAudio_wav(std::string filename) {
       snd.d[ch][i] = sam[i * channels + ch];
     }
   }
+  free(sam);
   return snd;
 }
 

@@ -83,14 +83,14 @@ T *image_padding(T *in, int height, int width, int hpad, int wpad) {
     int row = hpad-1 - i;
     if (row >= height) row = height-1;
     for (int j = 0; j < width+wpad*2; j++) {
-      out[w * i + j] = out[w * row + j];
+      out[w * i + j] = out[w * (row+hpad) + j];
     }
   }
   for (int i = 0; i < hpad; i++) {
     int row = height-1 - i;
     if (row < 0) row = 0;
     for (int j = 0; j < width+wpad*2; j++) {
-      out[w * (height+hpad+i) + j] = out[w * row + j];
+      out[w * (height+hpad+i) + j] = out[w * (row+hpad) + j];
     }
   }
   return out;
@@ -197,11 +197,11 @@ void processMusic(std::string name) {
     channels = 1;
     double rate = (double)snd.sampleRate / (double)SAMPLE_RATE;
     for (int i = 0; i < channels; i++) {
-      if (rate > 1)
-        snd.d[i] = lopass(snd.d[i], 1.0/rate, 50);
+      //if (rate > 1)
+      //  snd.d[i] = lopass(snd.d[i], 1.0/rate, 50);
       snd.d[i] = resample(snd.d[i], snd.sampleRate, SAMPLE_RATE);
-      if (rate < 1)
-        snd.d[i] = lopass(snd.d[i], rate, 50);
+      //if (rate < 1)
+      //  snd.d[i] = lopass(snd.d[i], rate, 50);
     }
     len = snd.length();
     #pragma omp master
@@ -319,6 +319,7 @@ void processMusic(std::string name) {
       std::string bmpName = name.substr(0, name.size()-4) + "_spec.bmp";
       br.WriteBMP(bmpName.c_str(), blockn, nFreq, bmp);
       printf("write spectrogram %.2fms\n", tm.getRunTime());
+      delete[] bmp;
     }
     delete[] local_max;
   }
@@ -345,7 +346,7 @@ int main(int argc, char const *argv[]) {
   flist.close();
   
   Timing timing;
-  #pragma omp parallel for schedule(static, 1)
+  #pragma omp parallel for schedule(dynamic)
   for (int i = 0; i < filenames.size(); i++) {
     std::string name = filenames[i];
     printf("File: %s\n", name.c_str());

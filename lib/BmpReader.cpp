@@ -5,6 +5,7 @@ unsigned char *BmpReader::ReadBMP(const char *filename, int *width, int *height,
     int w, h;
     int bitdepth;
     int headn;
+    size_t total = 0;
     FILE *f = fopen(filename, "rb");
     if (f == NULL) {
         fprintf(stderr, "cannot open file %s\n", filename);
@@ -38,7 +39,7 @@ unsigned char *BmpReader::ReadBMP(const char *filename, int *width, int *height,
     for (int i = 0; i < headn; i++) fgetc(f);
 
     for (int y = 0; y < *height; y++) {
-        fread(buf + w*3 * y, bitdepth>>3, w, f);
+        total += fread(buf + w*3 * y, bitdepth>>3, w, f) == w;
         if (bitdepth == 8) {
             for (int x = *width-1; x >= 0; x--) {
                 int c = buf[y*w*3 + x];
@@ -51,6 +52,11 @@ unsigned char *BmpReader::ReadBMP(const char *filename, int *width, int *height,
         for (int padding = w*bitdepth>>3; padding&3; padding++) fgetc(f);
     }
     fclose(f);
+    if (total != (size_t)*height) {
+        fprintf(stderr, "error reading %s\n", filename);
+        delete[] buf;
+        return NULL;
+    }
     return buf;
 fail:
     fprintf(stderr, "%s unsupported bmp format\n", filename);
