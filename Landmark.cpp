@@ -186,16 +186,32 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
 std::vector<Landmark> LandmarkBuilder::peaks_to_landmarks(const std::vector<Peak> &peaks) {
   std::vector<Landmark> lms;
   for (int i = 0; i < peaks.size(); i++) {
+    std::vector<Landmark> lm_to_sort;
     for (int j = i+1; j < peaks.size(); j++) {
-      if (j-i > FAN_COUNT) break;
+      //if (j-i > FAN_COUNT) break;
       Landmark lm;
       lm.time1 = peaks[i].time;
       lm.freq1 = peaks[i].freq;
       lm.time2 = peaks[j].time;
       lm.freq2 = peaks[j].freq;
-      if (lm.time2 - lm.time1 <= 200 && lm.time2 - lm.time1 >= 0) {
-        lms.push_back(lm);
+      if (lm.time2 - lm.time1 <= 40) {
+        int dt = lm.time2 - lm.time1;
+        int df = lm.freq2 - lm.freq1;
+        int dist = dt * dt * 50 + df * df;
+        lm.time1 = dist;
+        lm_to_sort.push_back(lm);
       }
+      else break;
+    }
+    std::sort(lm_to_sort.begin(), lm_to_sort.end(), [](Landmark a, Landmark b) {
+      return a.time1 < b.time1;
+    });
+    int cnt = 0;
+    for (Landmark lm : lm_to_sort) {
+      lm.time1 = peaks[i].time;
+      lms.push_back(lm);
+      cnt += 1;
+      if (cnt >= FAN_COUNT) break;
     }
   }
   return lms;

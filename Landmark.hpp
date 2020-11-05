@@ -17,8 +17,8 @@ public:
   // parameters
   int SAMPLE_RATE = 8820; // 44100 / 5
   int FFT_SIZE = 1024;
-  int FAN_COUNT = 5;
-  int NOVERLAP = FFT_SIZE * 0.4;
+  int FAN_COUNT = 10;
+  int NOVERLAP = FFT_SIZE * 0.5;
   int PEAK_NEIGHBORHOOD_SIZE = 10;
   
   std::vector<Peak> find_peaks(const std::vector<float> &sample);

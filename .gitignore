@@ -3,3 +3,9 @@
 *.out
 *.wav
 *.bmp
+
+# landmark dump
+*.lm
+
+# python cache
+*.pyc

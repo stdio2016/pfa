@@ -59,6 +59,13 @@ void processMusic(std::string name, LandmarkBuilder builder) {
     if (shortname.find('/') != shortname.npos) {
       shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
     }
+    std::string lm_file = shortname + ".lm";
+    FILE *fout = fopen(lm_file.c_str(), "wb");
+    if (fout) {
+      fwrite(lms.data(), sizeof(Landmark), lms.size(), fout);
+      fclose(fout);
+    }
+    
     #pragma omp critical
     printf("compute %s rms=%.2fdB peak=%d landmarks=%d\n", shortname.c_str(),
       log10(builder.rms) * 20, (int)peaks.size(), (int)lms.size());
