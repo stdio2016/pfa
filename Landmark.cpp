@@ -214,7 +214,7 @@ void LandmarkBuilder::drawSpecgram(const char *name, std::vector<Peak> peaks) {
       getOldColor(db, &bmp[idx]);
     }
   }
-  for (int i = 0; i < peaks.size()/2; i++) {
+  for (int i = 0; i < peaks.size(); i++) {
     int t = peaks[i].time;
     int f = peaks[i].freq;
     for (int y = std::max(0, f-2); y < std::min(nFreq, f+3); y++) {
