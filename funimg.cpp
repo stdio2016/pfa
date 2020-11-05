@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <cmath>
-#include "BmpReader.h"
-#include "fft.hpp"
-#include "WavReader.hpp"
+#include "lib/BmpReader.h"
+#include "lib/fft.hpp"
+#include "lib/WavReader.hpp"
 #include <vector>
 #include <cmath>
 #include <cstdlib>
 
 int main(int argc, char const *argv[]) {
   if (argc < 2) {
-    puts("usage: ./readmp3 mp3file");
+    puts("usage: ./funimg bmpfile");
     return 1;
   }
   BmpReader br;
@@ -43,24 +43,12 @@ int main(int argc, char const *argv[]) {
     }
     fft.realIFFT(&din[0], &dout[0]);
     for (int j = 0; j < 2048; j++) {
-      out[i * 2048 + j] += hann[j] * dout[j];
-    }
-  }
-  for (int i = 1; i < width; i++) {
-    for (int j = 1; j < height; j++) {
-      double amp = (toamp[bmp[(j*width + i)*3 + 1]] + toamp[bmp[(j*width + i-1)*3 + 1]]) * 0.5;
-      double r = 3.14159 / RAND_MAX * rand();
-      din[j*2] = amp * cos(r);
-      din[j*2+1] = amp * sin(r);
-    }
-    fft.realIFFT(&din[0], &dout[0]);
-    for (int j = 0; j < 2048; j++) {
-      out[i * 2048 + j - 1024] += hann[j] * dout[j];
+      out[i * 1024 + j] += hann[j] * dout[j];
     }
   }
   WavReader wav;
   wav.channels = 1;
-  wav.hz = 44100;
+  wav.hz = 17640;
   wav.nSamples = nSamples;
   wav.samples = &out[0];
   wav.WriteWAV("ifft.wav", 16);
