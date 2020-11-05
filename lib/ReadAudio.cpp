@@ -24,8 +24,9 @@ Sound ReadAudio(std::string filename) {
 
 Sound ReadAudio_wav(std::string filename) {
   WavReader wav;
-  if (wav.ReadWAV(filename.c_str())) {
-    throw std::runtime_error("Malformed wav file");
+  int error = wav.ReadWAV(filename.c_str());
+  if (error == 2) {
+    throw std::runtime_error("Cannot read file, file might not exist");
   }
   if (wav.channels < 1 || wav.hz < 1) {
     throw std::runtime_error("Malformed wav file");
@@ -48,9 +49,13 @@ Sound ReadAudio_mp3(std::string filename) {
   mp3dec_file_info_t info;
   mp3dec_init(&mp3d);
   info.buffer = 0;
-  if (mp3dec_load(&mp3d, filename.c_str(), &info, NULL, NULL)) {
+  int error = mp3dec_load(&mp3d, filename.c_str(), &info, NULL, NULL);
+  if (error) {
     free(info.buffer);
-    throw std::runtime_error("Malformed mp3 file");
+    if (error == MP3D_E_IOERROR)
+      throw std::runtime_error("Cannot read file, file might not exist");
+    else
+      throw std::runtime_error("Malformed mp3 file");
   }
   if (info.hz == 0 || info.channels == 0) {
     free(info.buffer);

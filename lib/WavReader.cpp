@@ -63,7 +63,7 @@ int WavReader::ReadWAV(const char *filename) {
   unsigned size = 0, maxSamples = 0;
   bool fmted = false;
   if (!fin) {
-    return 1;
+    return 2;
   }
   if (fread(buf, 4, 3, fin) != 3) {
     printf("less than 12 bytes\n");
