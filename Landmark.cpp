@@ -194,12 +194,14 @@ std::vector<Landmark> LandmarkBuilder::peaks_to_landmarks(const std::vector<Peak
       lm.freq1 = peaks[i].freq;
       lm.time2 = peaks[j].time;
       lm.freq2 = peaks[j].freq;
+      int dt = lm.time2 - lm.time1;
+      int df = lm.freq2 - lm.freq1;
       if (lm.time2 - lm.time1 <= 40) {
-        int dt = lm.time2 - lm.time1;
-        int df = lm.freq2 - lm.freq1;
-        int dist = dt * dt * 50 + df * df;
-        lm.time1 = dist;
-        lm_to_sort.push_back(lm);
+        if (abs(df) < 256) {
+          int dist = dt * dt * 50 + df * df;
+          lm.time1 = dist;
+          lm_to_sort.push_back(lm);
+        }
       }
       else break;
     }
