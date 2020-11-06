@@ -113,6 +113,7 @@ static void getOldColor(float db, unsigned char *bmp) {
   }
 }
 
+// use algorithm from https://github.com/worldveil/dejavu
 std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) {
   Timing tm; // to measure run time
   int len = sample.size();
@@ -126,8 +127,8 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
   // only peaks above db_min are considered fingerprints
   double db_min = log10(totle) * 10 - 60;
   this->rms = sqrt(totle);
-  #pragma omp master
-  printf("get rms %.3fms\n", tm.getRunTime());
+  if (log_file)
+    fprintf(log_file, "get rms %.3fms\n", tm.getRunTime());
   
   tm.getRunTime();
   FFT<double> fft(FFT_SIZE/2);
@@ -153,20 +154,20 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
     }
     blockn += 1;
   }
-  #pragma omp master
-  printf("fft %.3fms\n", tm.getRunTime());
+  if (log_file)
+    fprintf(log_file, "fft %.3fms\n", tm.getRunTime());
   
   tm.getRunTime();
   for (int i = 0; i < blockn * nFreq; i++) {
     spec[i] = log10(spec[i]) * 10;
   }
-  #pragma omp master
-  printf("log %.3fms\n", tm.getRunTime());
+  if (log_file)
+    fprintf(log_file, "log %.3fms\n", tm.getRunTime());
   
   tm.getRunTime();
   std::vector<double> local_max = max_filter(spec, blockn, nFreq, PEAK_NEIGHBORHOOD_SIZE, PEAK_NEIGHBORHOOD_SIZE);
-  #pragma omp master
-  printf("max filter %.3fms\n", tm.getRunTime());
+  if (log_file)
+    fprintf(log_file, "max filter %.3fms\n", tm.getRunTime());
   
   tm.getRunTime();
   std::vector<Peak> peaks;
@@ -178,11 +179,12 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
       peaks.push_back(peak);
     }
   }
-  #pragma omp master
-  printf("find peak %.3fms\n", tm.getRunTime());
+  if (log_file)
+    fprintf(log_file, "find peak %.3fms\n", tm.getRunTime());
   return peaks;
 }
 
+// use algorithm from https://github.com/worldveil/dejavu
 std::vector<Landmark> LandmarkBuilder::peaks_to_landmarks(const std::vector<Peak> &peaks) {
   std::vector<Landmark> lms;
   for (int i = 0; i < peaks.size(); i++) {
@@ -248,5 +250,6 @@ void LandmarkBuilder::drawSpecgram(const char *name, std::vector<Peak> peaks) {
   }
   BmpReader br;
   br.WriteBMP(name, blockn, nFreq, bmp.data());
-  printf("write spectrogram %.2fms\n", tm.getRunTime());
+  if (log_file)
+    fprintf(log_file, "write spectrogram %.2fms\n", tm.getRunTime());
 }

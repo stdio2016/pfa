@@ -2,6 +2,8 @@
 *.o
 *.out
 *.wav
+
+# output image for visualization
 *.bmp
 
 # landmark dump
@@ -9,3 +11,6 @@
 
 # python cache
 *.pyc
+
+# log files
+*.log

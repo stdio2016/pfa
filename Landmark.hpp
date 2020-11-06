@@ -1,4 +1,6 @@
+// use algorithm from https://github.com/worldveil/dejavu
 #include <vector>
+#include <stdio.h>
 
 struct Peak {
   int time;
@@ -20,6 +22,7 @@ public:
   int FAN_COUNT = 10;
   int NOVERLAP = FFT_SIZE * 0.5;
   int PEAK_NEIGHBORHOOD_SIZE = 10;
+  FILE *log_file = NULL;
   
   std::vector<Peak> find_peaks(const std::vector<float> &sample);
   
