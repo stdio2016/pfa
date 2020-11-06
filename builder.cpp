@@ -12,8 +12,11 @@
 #include "lib/Signal.hpp"
 #include "Landmark.hpp"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 void processMusic(std::string name, LandmarkBuilder builder,
-    std::vector<std::vector<uint64_t> > db, uint32_t songId) {
+    std::vector<std::vector<uint64_t> > &db, uint32_t songId) {
   Timing tm;
   try {
     Sound snd = ReadAudio(name.c_str());
@@ -56,7 +59,7 @@ void processMusic(std::string name, LandmarkBuilder builder,
       fprintf(builder.log_file, "create landmark pairs %.3fms\n", tm.getRunTime());
     
     std::string bmpName = name.substr(0, name.size()-4) + "_spec.bmp";
-    builder.drawSpecgram(bmpName.c_str(), peaks);
+    //builder.drawSpecgram(bmpName.c_str(), peaks);
     
     std::string shortname = name;
     if (shortname.find('/') != shortname.npos) {
@@ -93,6 +96,17 @@ void processMusic(std::string name, LandmarkBuilder builder,
   }
 }
 
+void createDirIfNotExist(const char *name) {
+  struct stat st = {0};
+  if (stat(name, &st) == -1) {
+    #ifdef _WIN32
+    mkdir(name);
+    #else
+    mkdir(name, 0755);
+    #endif
+  }
+}
+
 int main(int argc, char const *argv[]) {
   if (argc < 2) {
     printf("Usage: ./a.out <music list file>\n");
@@ -103,8 +117,8 @@ int main(int argc, char const *argv[]) {
     printf("cannot read music list!\n");
     return 1;
   }
-  system("mkdir logs");
-  system("mkdir lm");
+  createDirIfNotExist("lm");
+  createDirIfNotExist("logs");
   std::string line;
   std::vector<std::string> filenames;
   while (std::getline(flist, line)) {
@@ -114,11 +128,14 @@ int main(int argc, char const *argv[]) {
   
   Timing timing;
   LandmarkBuilder builder;
+  
+  // use current time for log name
   time_t start_time;
   time(&start_time);
   char namebuf[100];
   struct tm timeinfo = *localtime(&start_time);
   strftime(namebuf, 98, "%Y%m%d-%H%M%S", &timeinfo);
+  
   #pragma omp parallel firstprivate(builder)
   {
     std::stringstream ss;
@@ -138,11 +155,17 @@ int main(int argc, char const *argv[]) {
       processMusic(name, builder, db, i);
     }
     Timing tt;
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < db.size(); i++) {
       std::sort(db[i].begin(), db[i].end());
     }
     if (builder.log_file)
       fprintf(builder.log_file, "sort keys %.3fms\n", tt.getRunTime());
+    
+    if (builder.log_file) {
+      for (int i = 0; i < db.size(); i++) {
+        fprintf(builder.log_file, "freq=%3d landmarks=%d\n", i, (int)db[i].size());
+      }
+    }
     
     if (builder.log_file) fclose(builder.log_file);
   }
