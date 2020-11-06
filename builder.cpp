@@ -142,7 +142,7 @@ int main(int argc, char const *argv[]) {
       std::sort(db[i].begin(), db[i].end());
     }
     if (builder.log_file)
-      fprintf("sort keys %.2fms\n", tt.getRunTime());
+      fprintf(builder.log_file, "sort keys %.3fms\n", tt.getRunTime());
     
     if (builder.log_file) fclose(builder.log_file);
   }
