@@ -1,3 +1,4 @@
+#pragma once
 // use algorithm from https://github.com/worldveil/dejavu
 #include <vector>
 #include <stdio.h>
