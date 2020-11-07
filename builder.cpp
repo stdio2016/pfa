@@ -75,10 +75,10 @@ void processMusic(std::string name, LandmarkBuilder builder,
     tm.getRunTime();
     for (Landmark lm : lms) {
       uint32_t dt = (lm.time2 - lm.time1) & ((1<<6)-1);
-      uint32_t df = (lm.freq2 - lm.freq1) & ((1<<8)-1);
+      uint32_t df = (lm.freq2 - lm.freq1) & ((1<<9)-1);
       uint32_t f1 = lm.freq1 & ((1<<9)-1);
       uint32_t t = lm.time1 & ((1<<14)-1);
-      uint64_t key = f1<<15 | df<<7 | dt;
+      uint64_t key = f1<<15 | df<<6 | dt;
       uint64_t value = songId<<14 | t;
       
       db[f1].push_back(key<<32 | value);
@@ -107,11 +107,30 @@ void createDirIfNotExist(const char *name) {
   }
 }
 
+void dumpPartialDB(
+    std::vector<std::vector<uint64_t> > &db,
+    int threadid,
+    int dumpCount,
+    const char *db_location)
+{
+  for (int j = 0; j < db.size(); j++) {
+    std::sort(db[j].begin(), db[j].end());
+  }
+  std::stringstream ss;
+  ss << db_location << "/tmp_" << threadid << "_" << dumpCount << ".lm";
+  std::ofstream lm_out(ss.str().c_str(), std::ios::binary);
+  if (lm_out) {
+    for (int j = 0; j < db.size(); j++)
+      lm_out.write((const char *)db[j].data(), db[j].size() * sizeof(uint64_t));
+  }
+}
+
 int main(int argc, char const *argv[]) {
-  if (argc < 2) {
-    printf("Usage: ./a.out <music list file>\n");
+  if (argc < 3) {
+    printf("Usage: ./a.out <music list file> <db location>\n");
     return 1;
   }
+  const char *db_location = argv[2];
   std::ifstream flist(argv[1]);
   if (!flist) {
     printf("cannot read music list!\n");
@@ -119,6 +138,7 @@ int main(int argc, char const *argv[]) {
   }
   createDirIfNotExist("lm");
   createDirIfNotExist("logs");
+  createDirIfNotExist(db_location);
   std::string line;
   std::vector<std::string> filenames;
   while (std::getline(flist, line)) {
@@ -136,11 +156,15 @@ int main(int argc, char const *argv[]) {
   struct tm timeinfo = *localtime(&start_time);
   strftime(namebuf, 98, "%Y%m%d-%H%M%S", &timeinfo);
   
+  int nthreads = omp_get_max_threads();
+  std::vector<int> dumpCount(nthreads);
+  
   #pragma omp parallel firstprivate(builder)
   {
+    int tid = omp_get_thread_num();
     std::stringstream ss;
     ss << "logs/" << "builder" << namebuf;
-    ss << "t" << omp_get_thread_num();
+    ss << "t" << tid;
     ss << ".log";
     builder.log_file = fopen(ss.str().c_str(), "w");
     
@@ -153,11 +177,23 @@ int main(int argc, char const *argv[]) {
         fprintf(builder.log_file, "File: %s\n", name.c_str());
       fprintf(stdout, "File: %s\n", name.c_str());
       processMusic(name, builder, db, i);
+      long long nentries = 0;
+      for (int j = 0; j < db.size(); j++) {
+        nentries += db[j].size();
+      }
+      long long maxentries = 50000 * 1000; // 50M entries ~ 400MB
+      if (nentries > maxentries) {
+        Timing tt;
+        dumpCount[tid] += 1;
+        dumpPartialDB(db, tid, dumpCount[tid], db_location);
+        for (int j = 0; j < db.size(); j++) db[j].clear();
+        if (builder.log_file)
+          fprintf(builder.log_file, "sort keys %.3fms\n", tt.getRunTime());
+      }
     }
     Timing tt;
-    for (int i = 0; i < db.size(); i++) {
-      std::sort(db[i].begin(), db[i].end());
-    }
+    dumpCount[tid] += 1;
+    dumpPartialDB(db, tid, dumpCount[tid], db_location);
     if (builder.log_file)
       fprintf(builder.log_file, "sort keys %.3fms\n", tt.getRunTime());
     
