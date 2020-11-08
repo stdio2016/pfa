@@ -1,12 +1,14 @@
 #include <cmath>
 #include <stdio.h>
 #include <ctime>
+#include <cstdint>
 #include <omp.h>
 #include <algorithm>
 #include <string>
 #include <stdexcept>
 #include <fstream>
 #include <sstream>
+#include <queue>
 #include "lib/ReadAudio.hpp"
 #include "lib/Timing.hpp"
 #include "lib/Signal.hpp"
@@ -117,12 +119,71 @@ void dumpPartialDB(
     std::sort(db[j].begin(), db[j].end());
   }
   std::stringstream ss;
-  ss << db_location << "/tmp_" << threadid << "_" << dumpCount << ".lm";
+  ss << db_location << "/tmp_" << threadid << "_" << dumpCount << ".lms";
   std::ofstream lm_out(ss.str().c_str(), std::ios::binary);
   if (lm_out) {
     for (int j = 0; j < db.size(); j++)
       lm_out.write((const char *)db[j].data(), db[j].size() * sizeof(uint64_t));
   }
+}
+
+int merge_db(std::vector<std::string> filenames, std::string out_file) {
+  int bufsize = 2000000;
+  int nfiles = filenames.size();
+  FILE *fout = fopen(out_file.c_str(), "wb");
+  if (!fout) {
+    fprintf(stderr, "cannot open file %s\n", out_file.c_str());
+    return 1;
+  }
+  std::vector<FILE*> files(nfiles);
+  std::vector<uint64_t> buf(nfiles * bufsize);
+  std::vector<int> pos(nfiles);
+  std::vector<int> total(nfiles);
+  typedef std::pair<uint64_t, int> typep;
+  std::priority_queue<typep, std::vector<typep>, std::greater<typep>> pq;
+  for (int i = 0; i < nfiles; i++) {
+    files[i] = fopen(filenames[i].c_str(), "rb");
+    if (!files[i]) {
+      fprintf(stderr, "cannot open file %s\n", filenames[i].c_str());
+      return 1;
+    }
+    total[i] = fread(buf.data()+i*bufsize, sizeof(uint64_t), bufsize, files[i]);
+    if (total[i] > 0) {
+      pq.push(typep(buf[i*bufsize], i));
+      pos[i] += 1;
+    }
+  }
+  
+  std::vector<uint64_t> out;
+  while (!pq.empty()) {
+    typep cho = pq.top();
+    pq.pop();
+    out.push_back(cho.first);
+    if (out.size() == bufsize) {
+      fwrite(out.data(), sizeof(uint64_t), bufsize, fout);
+      out.clear();
+    }
+    int id = cho.second;
+    if (pos[id] == total[id] && total[id] == bufsize) {
+      // still has data
+      total[id] = fread(buf.data()+id*bufsize, sizeof(uint64_t), bufsize, files[id]);
+      pos[id] = 0;
+      if (total[id] > 0) {
+        pq.push(typep(buf[id*bufsize], id));
+        pos[id] += 1;
+      }
+    }
+    else if (pos[id] < total[id]) {
+      pq.push(typep(buf[id*bufsize + pos[id]], id));
+      pos[id] += 1;
+    }
+  }
+  fwrite(out.data(), sizeof(uint64_t), out.size(), fout);
+  fclose(fout);
+  for (int i = 0; i < nfiles; i++) {
+    fclose(files[i]);
+  }
+  return 0;
 }
 
 int main(int argc, char const *argv[]) {
@@ -205,6 +266,21 @@ int main(int argc, char const *argv[]) {
     
     if (builder.log_file) fclose(builder.log_file);
   }
+  
+  printf("merge landmark files...\n");
+  std::vector<std::string> tmp_lms;
+  for (int i = 0; i < dumpCount.size(); i++) {
+    for (int j = 1; j <= dumpCount[i]; j++) {
+      std::stringstream ss;
+      ss << db_location << "/tmp_" << i << "_" << j << ".lms";
+      tmp_lms.push_back(ss.str());
+    }
+  }
+  if (merge_db(tmp_lms, db_location + std::string("/landmarks.lms"))) {
+    printf("merge failed!\n");
+    return 1;
+  }
+  
   printf("Total time: %.3fs\n", timing.getRunTime() * 0.001);
   return 0;
 }

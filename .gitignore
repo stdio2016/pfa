@@ -9,6 +9,9 @@
 # landmark dump
 *.lm
 
+# landmark of multiple songs
+*.lms
+
 # python cache
 *.pyc
 
