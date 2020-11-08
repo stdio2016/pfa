@@ -186,6 +186,47 @@ int merge_db(std::vector<std::string> filenames, std::string out_file) {
   return 0;
 }
 
+int compressDatabase(
+    std::string lms,
+    std::string keyOut,
+    std::string valOut
+) {
+  FILE *fin = fopen(lms.c_str(), "rb");
+  if (!fin) {
+    fprintf(stderr, "cannot open file %s\n", lms.c_str());
+    return 1;
+  }
+  FILE *fkey = fopen(keyOut.c_str(), "wb");
+  if (!fkey) {
+    fprintf(stderr, "cannot open file %s\n", keyOut.c_str());
+    return 1;
+  }
+  FILE *fval = fopen(valOut.c_str(), "wb");
+  if (!fval) {
+    fprintf(stderr, "cannot open file %s\n", valOut.c_str());
+    return 1;
+  }
+  int buf_size = 1000000;
+  int key_count = 1<<24;
+  std::vector<uint64_t> buf(buf_size);
+  std::vector<uint32_t> buf2(buf_size);
+  std::vector<uint32_t> keyDat(key_count);
+  int nread = 0;
+  while ((nread = fread(buf.data(), sizeof(uint64_t), buf_size, fin)) > 0) {
+    for (int i = 0; i < nread; i++) {
+      uint32_t key = buf[i]>>32;
+      buf2[i] = buf[i];
+      keyDat[key] += 1;
+    }
+    fwrite(buf2.data(), sizeof(uint32_t), nread, fval);
+  }
+  fclose(fin);
+  fclose(fval);
+  fwrite(keyDat.data(), sizeof(uint32_t), key_count, fkey);
+  fclose(fkey);
+  return 0;
+}
+
 int main(int argc, char const *argv[]) {
   if (argc < 3) {
     printf("Usage: ./a.out <music list file> <db location>\n");
@@ -206,8 +247,9 @@ int main(int argc, char const *argv[]) {
     filenames.push_back(line);
   }
   flist.close();
+  printf("list contains %d songs\n", filenames.size());
   
-  Timing timing;
+  Timing timing, timing2;
   LandmarkBuilder builder;
   
   // use current time for log name
@@ -220,6 +262,7 @@ int main(int argc, char const *argv[]) {
   int nthreads = omp_get_max_threads();
   std::vector<int> dumpCount(nthreads);
   
+  printf("computing landmarks...\n");
   #pragma omp parallel firstprivate(builder)
   {
     int tid = omp_get_thread_num();
@@ -266,6 +309,7 @@ int main(int argc, char const *argv[]) {
     
     if (builder.log_file) fclose(builder.log_file);
   }
+  printf("compute landmark time: %.3fs\n", timing.getRunTime() * 0.001);
   
   printf("merge landmark files...\n");
   std::vector<std::string> tmp_lms;
@@ -280,7 +324,19 @@ int main(int argc, char const *argv[]) {
     printf("merge failed!\n");
     return 1;
   }
+  printf("merge landmark files time: %.3fs\n", timing.getRunTime() * 0.001);
   
-  printf("Total time: %.3fs\n", timing.getRunTime() * 0.001);
+  printf("compressing database...\n");
+  if (compressDatabase(
+    db_location + std::string("/landmarks.lms"),
+    db_location + std::string("/landmarkKey.lmdb"),
+    db_location + std::string("/landmarkValue.lmdb")
+  )) {
+    printf("compress failed!\n");
+    return 1;
+  }
+  printf("compress database time: %.3fs\n", timing.getRunTime() * 0.001);
+  
+  printf("Total time: %.3fs\n", timing2.getRunTime() * 0.001);
   return 0;
 }

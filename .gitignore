@@ -12,6 +12,9 @@
 # landmark of multiple songs
 *.lms
 
+# landmark database file
+*.lmdb
+
 # python cache
 *.pyc
 
