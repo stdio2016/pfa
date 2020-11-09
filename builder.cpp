@@ -238,6 +238,11 @@ int main(int argc, char const *argv[]) {
     printf("cannot read music list!\n");
     return 1;
   }
+  std::ofstream flistOut(db_location + std::string("/songList.txt"));
+  if (!flistOut) {
+    printf("cannot write music list!\n");
+    return 1;
+  }
   createDirIfNotExist("lm");
   createDirIfNotExist("logs");
   createDirIfNotExist(db_location);
@@ -245,8 +250,10 @@ int main(int argc, char const *argv[]) {
   std::vector<std::string> filenames;
   while (std::getline(flist, line)) {
     filenames.push_back(line);
+    flistOut << line << '\n';
   }
   flist.close();
+  flistOut.close();
   printf("list contains %d songs\n", filenames.size());
   
   Timing timing, timing2;

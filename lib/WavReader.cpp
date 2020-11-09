@@ -92,7 +92,7 @@ int WavReader::ReadWAV(const char *filename) {
     size -= 8;
     unsigned chkSize = read4b(buf + 4);
     unsigned remain = chkSize;
-    printf("chunk %c%c%c%c size %u\n", buf[0],buf[1],buf[2],buf[3], chkSize);
+    //printf("chunk %c%c%c%c size %u\n", buf[0],buf[1],buf[2],buf[3], chkSize);
     if (chkSize > size) {
       printf("chunk size too big %u\n", chkSize);
       goto fail;
