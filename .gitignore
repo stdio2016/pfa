@@ -21,3 +21,6 @@ songList.txt
 
 # log files
 *.log
+
+# results
+dat/

@@ -7,6 +7,7 @@ args = argparse.ArgumentParser()
 args.add_argument('-song')
 args.add_argument('-query')
 args.add_argument('-wav')
+args.add_argument('-offset')
 args = args.parse_args()
 
 FFT_SIZE = 1024
@@ -74,6 +75,8 @@ if max_score > 0:
     sec = best_offset * (FFT_SIZE - NOVERLAP) / SAMPLE_RATE
     print('match position:', best_offset, '(%.2fs)' % sec)
 
+    if args.offset:
+        best_offset = int(args.offset)
     match_peaks = set()
     for i in range(query.shape[0]):
         t1, f1, t2, f2 = query[i]
@@ -112,6 +115,8 @@ if max_score > 0:
     query_peaks = np.array(list(query_peaks))
     match_peaks = np.array(list(match_peaks))
     intersect_peaks = np.array(list(intersect_peaks))
+    print('blue peaks:', len(intersect_peaks))
+    print('green peaks:', len(match_peaks))
 
     plt.scatter(song_peaks[:,0], song_peaks[:,1], color='red')
     plt.scatter(query_peaks[:,0], query_peaks[:,1], color='yellow')
