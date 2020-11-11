@@ -22,7 +22,8 @@ public:
   int FFT_SIZE = 1024;
   int FAN_COUNT = 10;
   int NOVERLAP = FFT_SIZE * 0.5;
-  int PEAK_NEIGHBORHOOD_SIZE = 10;
+  int PEAK_NEIGHBORHOOD_SIZE_FREQ = 10;
+  int PEAK_NEIGHBORHOOD_SIZE_TIME = 5;
   FILE *log_file = NULL;
   
   std::vector<Peak> find_peaks(const std::vector<float> &sample);

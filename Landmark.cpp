@@ -165,7 +165,7 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
     fprintf(log_file, "log %.3fms\n", tm.getRunTime());
   
   tm.getRunTime();
-  std::vector<double> local_max = max_filter(spec, blockn, nFreq, PEAK_NEIGHBORHOOD_SIZE, PEAK_NEIGHBORHOOD_SIZE);
+  std::vector<double> local_max = max_filter(spec, blockn, nFreq, PEAK_NEIGHBORHOOD_SIZE_TIME, PEAK_NEIGHBORHOOD_SIZE_FREQ);
   if (log_file)
     fprintf(log_file, "max filter %.3fms\n", tm.getRunTime());
   
