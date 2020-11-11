@@ -49,7 +49,6 @@ void processMusic(std::string name, LandmarkBuilder builder,
       //if (rate < 1)
       //  snd.d[i] = lopass(snd.d[i], rate, 50);
     }
-    len = snd.length();
     if (builder.log_file)
       fprintf(builder.log_file, "resample %.3fms\n", tm.getRunTime());
     
