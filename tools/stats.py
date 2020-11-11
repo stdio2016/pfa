@@ -12,10 +12,13 @@ durs = 0.0
 for i in range(int(args.t)):
     filename = "%s%d.log" % (args.name, i)
     fin = open(filename, "r")
+    state = 'getlm'
     for line in fin:
         if line.startswith('File: '):
-            pass
-        else:
+            continue
+        if line.startswith('freq='):
+            state = 'merge'
+        if state == 'getlm':
             s = re.search(r'(.+) (\d+\.\d+)ms', line)
             if s:
                 part = s[1]
