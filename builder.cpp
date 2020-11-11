@@ -89,7 +89,8 @@ void processMusic(std::string name, LandmarkBuilder builder,
       fprintf(builder.log_file, "add landmark to database %.3fms\n", tm.getRunTime());
     
     if (builder.log_file) {
-      fprintf(builder.log_file, "compute %s rms=%.2fdB peak=%d landmarks=%d\n", shortname.c_str(),
+      fprintf(builder.log_file, "compute %s duration=%.3fs rms=%.2fdB peak=%d landmarks=%d\n", shortname.c_str(),
+        (double)len / snd.sampleRate,
         log10(builder.rms) * 20, (int)peaks.size(), (int)lms.size());
     }
   }
