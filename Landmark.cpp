@@ -126,6 +126,8 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
   totle /= len;
   // only peaks above db_min are considered fingerprints
   double db_min = log10(totle) * 10 - 60;
+  // my spectrogram is not normalized
+  db_min += log10(FFT_SIZE/2) * 20;
   this->rms = sqrt(totle);
   if (log_file)
     fprintf(log_file, "get rms %.3fms\n", tm.getRunTime());
@@ -198,17 +200,18 @@ std::vector<Landmark> LandmarkBuilder::peaks_to_landmarks(const std::vector<Peak
       lm.freq2 = peaks[j].freq;
       int dt = lm.time2 - lm.time1;
       int df = lm.freq2 - lm.freq1;
-      if (lm.time2 - lm.time1 <= 40) {
-        if (lm.time2 > lm.time1 && abs(df) < 256) {
-          int dist = dt * dt * 20 + df * df;
+      if (lm.time2 - lm.time1 <= LM_DT_MAX) {
+        if (lm.time2 - lm.time1 >= LM_DT_MIN && abs(df) < LM_DF_MAX) {
+          int dist = peaks[j].time * (FFT_SIZE/2+1) + peaks[j].freq;
           lm.time1 = dist;
           lm_to_sort.push_back(lm);
         }
       }
       else break;
     }
-    std::sort(lm_to_sort.begin(), lm_to_sort.end(), [](Landmark a, Landmark b) {
-      return a.time1 < b.time1;
+    std::sort(lm_to_sort.begin(), lm_to_sort.end(), [this](Landmark a, Landmark b) {
+      // sort by energy
+      return spec[a.time1] > spec[b.time1];
     });
     int cnt = 0;
     for (Landmark lm : lm_to_sort) {
