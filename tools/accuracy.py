@@ -1,8 +1,13 @@
 import re
+import argparse
+
+args = argparse.ArgumentParser()
+args.add_argument('-i', default='dat/result.txt')
+args = args.parse_args()
 
 f1 = open('dat/groundTruth.txt', 'r')
 A = f1.readlines()
-f2 = open('dat/result.txt', 'r')
+f2 = open(args.i, 'r')
 B = f2.readlines()
 
 wavpat = re.compile(r'(\w{5})\.wav')
