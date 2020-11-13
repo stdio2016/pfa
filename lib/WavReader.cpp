@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include "utils.hpp"
 
 static uint32_t read4b(uint8_t *buf) {
   return buf[0] | buf[1]<<8 | buf[2]<<16 | buf[3]<<24;
@@ -59,7 +60,13 @@ int WavReader::ReadWAV(const char *filename) {
   bitDepth = 16;
   samples = 0;
   
+#ifdef _WIN32
+  wchar_t *wname = utf8_to_wchar(filename);
+  FILE *fin = _wfopen(wname, L"rb");
+  delete[] wname;
+#else
   FILE *fin = fopen(filename, "rb");
+#endif
   unsigned size = 0, maxSamples = 0;
   bool fmted = false;
   if (!fin) {
@@ -159,7 +166,13 @@ int WavReader::WriteWAV(const char *filename, int bitDepth) {
   if (bitDepth != 8 && bitDepth != 16) {
     return 400;
   }
+#ifdef _WIN32
+  wchar_t *wname = utf8_to_wchar(filename);
+  FILE *fout = _wfopen(wname, L"wb");
+  delete[] wname;
+#else
   FILE *fout = fopen(filename, "wb");
+#endif
   if (!fout) {
     return 1;
   }

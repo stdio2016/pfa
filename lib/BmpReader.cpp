@@ -1,12 +1,20 @@
 #include <cstdio>
 #include "BmpReader.h"
+#include "utils.hpp"
+
 unsigned char *BmpReader::ReadBMP(const char *filename, int *width, int *height, int *color) {
     unsigned char *buf;
     int w, h;
     int bitdepth;
     int headn;
     size_t total = 0;
+#ifdef _WIN32
+    wchar_t *wname = utf8_to_wchar(filename);
+    FILE *f = _wfopen(wname, L"rb");
+    delete[] wname;
+#else
     FILE *f = fopen(filename, "rb");
+#endif
     if (f == NULL) {
         fprintf(stderr, "cannot open file %s\n", filename);
         return NULL;
@@ -73,7 +81,13 @@ unsigned int BmpReader::readUnsigned(unsigned char *bytes, int size) {
 }
 
 int BmpReader::WriteBMP(const char *filename, int width, int height, unsigned char *bits) {
+#ifdef _WIN32
+    wchar_t *wname = utf8_to_wchar(filename);
+    FILE *f = _wfopen(wname, L"wb");
+    delete[] wname;
+#else
     FILE *f = fopen(filename, "wb");
+#endif
     if (f == NULL) {
         fprintf(stderr, "cannot write file %s\n", filename);
         return 1;

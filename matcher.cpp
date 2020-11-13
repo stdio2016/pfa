@@ -11,6 +11,7 @@
 #include "lib/Timing.hpp"
 #include "lib/Signal.hpp"
 #include "Landmark.hpp"
+#include "lib/utils.hpp"
 
 struct match_t {
   int offset;
@@ -90,7 +91,13 @@ std::vector<Landmark> getLandmarks(
     shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
   }
   std::string lm_file = "lm/" + shortname + ".lm";
+#ifdef _WIN32
+  wchar_t *lm_file_w = utf8_to_wchar(lm_file.c_str());
+  FILE *fout = _wfopen(lm_file_w, L"wb");
+  delete[] lm_file_w;
+#else
   FILE *fout = fopen(lm_file.c_str(), "wb");
+#endif
   if (fout) {
     fwrite(lms_cum.data(), sizeof(Landmark), lms_cum.size(), fout);
     fclose(fout);
@@ -226,6 +233,9 @@ int processQuery(
   }
   catch (std::runtime_error x) {
     printf("%s\n", x.what());
+    if (builder.log_file) {
+      fprintf(builder.log_file, "%s\n", x.what());
+    }
   }
   return -1;
 }

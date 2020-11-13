@@ -5,6 +5,7 @@
 #include "WavReader.hpp"
 #include <cstdlib>
 #include <stdexcept>
+#include "utils.hpp"
 
 Sound ReadAudio(std::string filename) {
   size_t dot = filename.find_last_of('.');
@@ -49,7 +50,14 @@ Sound ReadAudio_mp3(std::string filename) {
   mp3dec_file_info_t info;
   mp3dec_init(&mp3d);
   info.buffer = 0;
-  int error = mp3dec_load(&mp3d, filename.c_str(), &info, NULL, NULL);
+  int error;
+#ifdef _WIN32
+  wchar_t *wname = utf8_to_wchar(filename.c_str());
+  error = mp3dec_load_w(&mp3d, wname, &info, NULL, NULL);
+  delete[] wname;
+#else
+  error = mp3dec_load(&mp3d, filename.c_str(), &info, NULL, NULL);
+#endif
   if (error) {
     free(info.buffer);
     if (error == MP3D_E_IOERROR)

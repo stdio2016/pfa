@@ -13,6 +13,7 @@
 #include "lib/Timing.hpp"
 #include "lib/Signal.hpp"
 #include "Landmark.hpp"
+#include "lib/utils.hpp"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -67,7 +68,13 @@ void processMusic(std::string name, LandmarkBuilder builder,
       shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
     }
     std::string lm_file = "lm/" + shortname + ".lm";
+#ifdef _WIN32
+    wchar_t *lm_file_w = utf8_to_wchar(lm_file.c_str());
+    FILE *fout = _wfopen(lm_file_w, L"wb");
+    delete[] lm_file_w;
+#else
     FILE *fout = fopen(lm_file.c_str(), "wb");
+#endif
     if (fout) {
       fwrite(lms.data(), sizeof(Landmark), lms.size(), fout);
       fclose(fout);
@@ -95,6 +102,9 @@ void processMusic(std::string name, LandmarkBuilder builder,
   }
   catch (std::runtime_error x) {
     printf("%s\n", x.what());
+    if (builder.log_file) {
+      fprintf(builder.log_file, "%s\n", x.what());
+    }
   }
 }
 
