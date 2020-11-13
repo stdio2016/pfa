@@ -2,7 +2,7 @@ import re
 import argparse
 
 args = argparse.ArgumentParser()
-args.add_argument('-i', default='dat/result.txt')
+args.add_argument('-result', default='dat/result.txt')
 args = args.parse_args()
 
 f1 = open('dat/groundTruth.txt', 'r')

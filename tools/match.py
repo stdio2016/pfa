@@ -4,8 +4,8 @@ import wave
 from matplotlib import pyplot as plt
 
 args = argparse.ArgumentParser()
-args.add_argument('-song')
-args.add_argument('-query')
+args.add_argument('-song', required=True)
+args.add_argument('-query', required=True)
 args.add_argument('-wav')
 args.add_argument('-offset')
 args = args.parse_args()
@@ -20,6 +20,7 @@ print('landmarks in song:', song.shape[0])
 query = np.fromfile(args.query, np.uint32)
 query = query.reshape((-1,4))
 print('landmarks in query:', query.shape[0])
+query_dur = np.max(query[:,[0,2]])
 
 # build a database
 db = {}
@@ -105,7 +106,7 @@ if max_score > 0:
     # analyze peaks
     qlen = 10 * frame_per_sec
     # time shift song peaks
-    song_peaks = set((t-best_offset, f) for (t,f) in song_peaks if 0 <= t-best_offset <= qlen)
+    song_peaks = set((t-best_offset, f) for (t,f) in song_peaks if 0 <= t-best_offset <= max(query_dur,qlen))
     intersect_peaks = song_peaks & query_peaks
     song_peaks -= intersect_peaks
     query_peaks -= intersect_peaks
