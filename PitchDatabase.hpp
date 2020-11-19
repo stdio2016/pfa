@@ -11,6 +11,7 @@ struct match_t {
 class PitchDatabase {
 public:
   std::vector<std::string> songList;
+  std::vector<std::string> srcList;
   
   std::vector<std::vector<int> > pitches;
   
@@ -20,7 +21,7 @@ public:
   
   int query_pitch(
     const std::vector<int> &pitch,
-    int *out_scores,
+    double *out_scores,
     FILE *log_file
   ) const;
 };

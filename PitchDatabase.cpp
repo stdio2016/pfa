@@ -9,6 +9,8 @@ int PitchDatabase::load(std::string dir) {
   if (!fin) return 1;
   std::string name;
   while (std::getline(fin, name)) {
+    std::string src;
+    std::getline(fin, src);
     std::string line;
     std::getline(fin, line);
     int ptc;
@@ -16,7 +18,6 @@ int PitchDatabase::load(std::string dir) {
     int i = 0;
     std::vector<int> pitch;
     while (ss >> ptc) {
-      if (i%5 == 0)
       pitch.push_back(ptc);
       i++;
     }
@@ -26,6 +27,7 @@ int PitchDatabase::load(std::string dir) {
     std::sort(tosort.begin(), tosort.end());
     int mid = tosort[tosort.size()/2];
     std::cout << "db " << name << " mid=" << mid << '\n';
+    srcList.push_back(src);
     songList.push_back(name);
     pitches.push_back(pitch);
     midPitches.push_back(mid);
@@ -34,48 +36,68 @@ int PitchDatabase::load(std::string dir) {
   return 0;
 }
 
-int computeDtw(const std::vector<int> &song, const std::vector<int> &seq, int shift) {
+double computeDtw(const std::vector<int> &song, const std::vector<int> &seq, int shift) {
   if (song.size() == 0 || seq.size() == 0) return 99999;
-  int n = seq.size();
+  int n = song.size();
   std::vector<int> go(n+1,99999), go2(n+1,99999);
   go[0] = 0;
-  for (int i = 0; i < song.size(); i++) {
+  for (int i = 0; i < seq.size(); i++) {
     go2[0] = 99999;
     for (int j = 0; j < n; j++) {
       int cho1 = go2[j];
       int cho2 = go[j+1];
       int cho3 = go[j];
-      int diff = song[i] - seq[j] + shift;
+      int diff = song[j] - seq[i] + shift;
       if (diff < 0) diff = -diff;
       go2[j+1] = diff + std::min(cho1, std::min(cho2, cho3));
       //go2[j] = diff + std::min(cho1, cho2);
     }
     std::swap(go, go2);
   }
-  return go[n];
+  double best = 99999;
+  for (int i = 90; i < n; i++) {
+    if ((double)go[i]/(i+seq.size()) < best) best = (double)go[i]/(i+seq.size());
+  }
+  return best;
 }
 
 int PitchDatabase::query_pitch(
   const std::vector<int> &pitch,
-  int *out_scores,
+  double *out_scores,
   FILE *log_file
 ) const {
   std::vector<int> tosort = pitch;
   // auto transpose!
   std::sort(tosort.begin(), tosort.end());
   int mid = tosort[tosort.size()/2];
-  std::cout << "query mid=" << mid << '\n';
+  printf("query mid=%d\n", mid);
   for (int i = 0; i < songList.size(); i++) {
-    int which = 0, best = 99999;
-    for (int shift = -2; shift <= 2; shift++) {
-      int cost = computeDtw(pitches[i], pitch, shift + mid - midPitches[i]);
-      if (cost < best) {
-        which = shift;
-        best = cost;
+    int which = 0;
+    double best = 99999;
+    double cost = computeDtw(pitches[i], pitch, mid - midPitches[i]);
+    double cost2 = computeDtw(pitches[i], pitch, mid - midPitches[i] + 1);
+    if (cost < cost2) {
+      while (cost < cost2) {
+        which -= 1;
+        cost2 = cost;
+        cost = computeDtw(pitches[i], pitch, mid - midPitches[i] + which);
       }
+      which += 1;
+      best = cost2;
+    }
+    else {
+      which = 1;
+      while (cost2 < cost) {
+        which += 1;
+        cost = cost2;
+        cost2 = computeDtw(pitches[i], pitch, mid - midPitches[i] + which);
+      }
+      which -= 1;
+      best = cost;
     }
     out_scores[i] = -best;
-    std::cout << "  " << songList[i] <<' ' << best << " shift=" << which << '\n';
+    printf("  %s %f shift=%d\n", srcList[i].c_str(), best, which);
+    //std::cout << "  " << srcList[i] <<' ' << best << " shift=" << which << '\n';
   }
   return 0;
 }

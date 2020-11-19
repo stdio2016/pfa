@@ -2,7 +2,7 @@
 
 struct PitchTracking {
   int FFT_SIZE = 2048;
-  double StepTime = 0.01;
+  double StepTime = 0.05;
   double MinimumPitch;
   double MaximumPitch;
   // parameter from Praat source code

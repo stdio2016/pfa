@@ -50,7 +50,8 @@ int processQuery(
     std::string name,
     PitchTracking builder,
     const PitchDatabase &db,
-    int *scores
+    double *scores,
+    std::vector<int> &midi
 ) {
   Timing tm;
   try {
@@ -70,7 +71,7 @@ int processQuery(
 
     std::vector<double> pitch = getPitch(snd.d[0], snd.sampleRate, builder);
     
-    std::vector<int> midi;
+    midi.clear();
     int prev = 0, empty = 0;
     for (int i = 0; i < pitch.size(); i++) {
       int ptc = prev;
@@ -84,10 +85,6 @@ int processQuery(
         midi.push_back(ptc);
       prev = ptc;
     }
-    for (int i = 0; i < midi.size(); i++) {
-      printf("%d ", midi[i]);
-    }
-    printf("\n");
     
     db.query_pitch(midi, scores, NULL);
     return 0;
@@ -110,13 +107,15 @@ void runCommand(std::string line, SOCKET socket, ThreadParam *param) {
     PitchTracking builder;
     const PitchDatabase &db = *param->db;
     int nSongs = db.songList.size();
-    std::vector<int> scores(nSongs);
+    std::vector<double> scores(nSongs);
     std::stringstream outs;
+    std::vector<int> midi;
     int ret = processQuery(
         file,
         builder,
         db,
-        scores.data()
+        scores.data(),
+        midi
     );
     if (ret == -1) {
       outs << "{\"progress\":\"error\",\"reason\":\"file not found\"}\r\n";
@@ -136,7 +135,13 @@ void runCommand(std::string line, SOCKET socket, ThreadParam *param) {
           shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
         }
         outs << "{\"name\":\"" << shortname << "\",";
+        outs << "\"file\":\"" << db.srcList[me] << "\",";
         outs << "\"score\":" << scores[me] << "}";
+      }
+      outs << "],\"pitch\":[";
+      for (int i = 0; i < midi.size(); i++) {
+        if (i) outs<<',';
+        outs << midi[i];
       }
       outs << "]}\r\n";
     }
