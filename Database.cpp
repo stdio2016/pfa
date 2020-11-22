@@ -19,6 +19,27 @@ int Database::load(std::string dir) {
   flist.close();
   printf("nsongs %d\n", (int)songList.size());
   
+  songNameList = songList;
+  flist.open(dir + std::string("/songNameList.txt"));
+  if (flist) {
+    std::string line;
+    for (int i = 0; i < songList.size(); i++) {
+      if (std::getline(flist, line))
+        songNameList[i] = line;
+    }
+    flist.close();
+  }
+  songSrcList = songList;
+  flist.open(dir + std::string("/songSrcList.txt"));
+  if (flist) {
+    std::string line;
+    for (int i = 0; i < songList.size(); i++) {
+      if (std::getline(flist, line))
+        songSrcList[i] = line;
+    }
+    flist.close();
+  }
+  
   int key_n = 1<<24;
   db_key.resize(key_n + 1);
   std::ifstream fin(dir + "/landmarkKey.lmdb");

@@ -173,7 +173,7 @@ void runCommand(std::string line, SOCKET socket, ThreadParam *param) {
       for (int i = 0; i < 10 && i < nSongs; i++) {
         if (i) outs << ",";
         int me = ind[i];
-        std::string shortname = db.songList[me];
+        std::string shortname = db.songNameList[me];
         if (shortname.find('/') != shortname.npos) {
           shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
         }
@@ -181,6 +181,7 @@ void runCommand(std::string line, SOCKET socket, ThreadParam *param) {
         if (offset < 0) offset = 0;
         offset *= double(builder.FFT_SIZE - builder.NOVERLAP) / builder.SAMPLE_RATE;
         outs << "{\"name\":\"" << shortname << "\",";
+        outs << "\"file\":\"" << db.songSrcList[me] << "\",";
         outs << "\"score\":" << scores[me].score << ",";
         outs << "\"time\":" << offset << "}";
       }

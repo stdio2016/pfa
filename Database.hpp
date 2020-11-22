@@ -11,6 +11,8 @@ struct match_t {
 class Database {
 public:
   std::vector<std::string> songList;
+  std::vector<std::string> songNameList;
+  std::vector<std::string> songSrcList;
   
   std::vector<long long> db_key;
   
