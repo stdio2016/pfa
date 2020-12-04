@@ -3,12 +3,51 @@ import miniaudio
 from miniaudio import SampleFormat
 import numpy as np
 from scipy import signal
+#import matplotlib.pyplot as plt
 
 def my_box_conv(x, k):
     n = x.shape[0]
     c = np.cumsum(x)
     d = c[k:] - c[:n-k]
     return np.concatenate([[c[k-1]], d])
+
+def estimate_conv(x, y, kern=100, mode='iter'):
+    y = y[kern:-kern]
+    k = kern*2+1
+    n = len(x)
+    if mode == 'iter':
+        h = np.zeros(k)
+        lr = 1/len(x)
+        prev_loss = None
+        for step in range(100):
+            noise = signal.convolve(x, h, 'valid') - y
+            loss = np.average(noise**2)
+            grad = signal.convolve(np.flip(x), noise, 'valid')
+            if prev_loss is not None and loss > prev_loss:
+                lr *= 0.5
+            h -= grad * lr
+            print(loss)
+            prev_loss = loss
+    else:
+        X = np.zeros([k, k])
+        for i in range(k):
+            X[0, i] = x[:n-k+1].dot(x[i:n-k+1+i])
+        for j in range(1, k):
+            X[j, 0] = X[0, j]
+            X[j, 1:] = X[j-1, :-1] - x[j-1] * x[0:k-1] + x[n-k+j] * x[n-k+1:]
+        X = X + np.eye(k) * np.sum(x**2) * 0.001
+        Y = np.zeros(k)
+        for i in range(k):
+            Y[i] = y.dot(x[i:n-k+1+i])
+        h = np.linalg.solve(X, Y)
+        h = np.flip(h)
+    sig = signal.convolve(x, h, 'valid')
+    noise = sig - y
+    print('signal=%f %f' % (np.sqrt(np.average(sig**2)), np.sqrt(np.average(x**2))))
+    print('noise=%f' % np.sqrt(np.average(noise**2)))
+    print('SNR2=%.3fdB' % (10 * np.log10(np.sum(sig**2) / np.sum(noise**2))))
+    print('convolution=%.3fdB' % (10 * np.log10(np.sum(h**2))))
+    return h
 
 def signal_noise_ratio(audio, query, smpRate, minOverlap):
     xn = audio.shape[0]
@@ -27,6 +66,12 @@ def signal_noise_ratio(audio, query, smpRate, minOverlap):
     pos = np.argmax(err[overlap:xn+yn-1-overlap]) + overlap
     
     part = padded[pos:pos+yn]
+    #h1 = estimate_conv(part, query, 100, 'iter')
+    h2 = estimate_conv(part, query, 100, 'direct')
+    #plt.plot(h1)
+    #plt.plot(h2)
+    #plt.legend(['iter', 'direct'])
+    #plt.show()
     amp = np.sum(query*part) / np.sum(part**2)
     diff = query - part * amp
     noise = np.average(diff**2)
