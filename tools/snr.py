@@ -3,6 +3,7 @@ import miniaudio
 from miniaudio import SampleFormat
 import numpy as np
 from scipy import signal
+import soundfile
 #import matplotlib.pyplot as plt
 
 def my_box_conv(x, k):
@@ -19,7 +20,7 @@ def estimate_conv(x, y, kern=100, mode='iter'):
         h = np.zeros(k)
         lr = 1/len(x)
         prev_loss = None
-        for step in range(100):
+        for step in range(50):
             noise = signal.convolve(x, h, 'valid') - y
             loss = np.average(noise**2)
             grad = signal.convolve(np.flip(x), noise, 'valid')
@@ -83,6 +84,12 @@ def signal_noise_ratio(audio, query, smpRate, minOverlap):
     #print('signal rms is', np.sqrt(sig))
     #print('query rms is', np.sqrt(np.average(query**2)))
     #print('noise rms is', np.sqrt(noise))
+    qhat = signal.fftconvolve(audio, h2, 'full')[100:-100]
+    padded[yn-1:yn+xn-1] = qhat
+    part = padded[pos:pos+yn]
+    diff = query - part
+    soundfile.write('tst.wav', qhat, smpRate)
+    soundfile.write('diff.wav', diff, smpRate)
     return shift/smpRate, snr, amp
 
 def main(args):
@@ -94,7 +101,7 @@ def main(args):
     query = miniaudio.decode(code, nchannels=1, sample_rate=audio.sample_rate, output_format=SampleFormat.FLOAT32)
     x = np.asarray(audio.samples)
     y = np.asarray(query.samples)
-    shift, snr, amp = signal_noise_ratio(x, y, audio.sample_rate, 0.9)
+    shift, snr, amp = signal_noise_ratio(x, y, audio.sample_rate, 5)
     print('shift time %.3fs SNR=%.3fdB amp=%.6f' % (shift, snr, amp))
 
 if __name__ == '__main__':
