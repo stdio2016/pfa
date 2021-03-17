@@ -3,6 +3,11 @@
 *.out
 *.wav
 
+builder
+matcher
+matchServer
+qbshServer
+
 # output image for visualization
 *.bmp
 
