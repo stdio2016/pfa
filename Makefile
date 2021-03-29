@@ -1,6 +1,6 @@
-MYLIB := lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/signal.cpp lib/utils.cpp lib/Pitch.cpp
+MYLIB := lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp
 
-HEADERS := lib/WavReader.hpp lib/Timing.hpp lib/ReadAudio.hpp lib/BmpReader.h lib/signal.hpp lib/utils.hpp lib/Pitch.hpp
+HEADERS := lib/WavReader.hpp lib/Timing.hpp lib/ReadAudio.hpp lib/BmpReader.h lib/Signal.hpp lib/utils.hpp lib/Pitch.hpp
 HEADERS += Landmark.hpp Database.hpp PitchDatabase.hpp
 
 CXXFLAGS := -O3 -fopenmp
@@ -11,14 +11,14 @@ else
 	LIBS +=
 endif
 
-builder:
+builder: builder.cpp Landmark.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) builder.cpp Landmark.cpp $(MYLIB) -o $@ $(LIBS)
 
-matcher:
+matcher: matcher.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) matcher.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
 
-matchServer:
+matchServer: matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) -o $@ $(LIBS)
 
-qbshServer:
+qbshServer: qbshServer.cpp PitchDatabase.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) qbshServer.cpp lib/Pitch.cpp PitchDatabase.cpp $(MYLIB) -o $@ $(LIBS)
