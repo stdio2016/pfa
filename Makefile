@@ -11,14 +11,14 @@ else
 	LIBS +=
 endif
 
-builder: builder.cpp Landmark.cpp $(MYLIB) Makefile $(HEADERS)
+builder:
 	$(CXX) $(CXXFLAGS) builder.cpp Landmark.cpp $(MYLIB) -o $@ $(LIBS)
 
-matcher: matcher.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
+matcher:
 	$(CXX) $(CXXFLAGS) matcher.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
 
-matchServer: matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
+matchServer:
 	$(CXX) $(CXXFLAGS) matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) -o $@ $(LIBS)
 
-qbshServer: qbshServer.cpp PitchDatabase.cpp $(MYLIB) Makefile $(HEADERS)
+qbshServer:
 	$(CXX) $(CXXFLAGS) qbshServer.cpp lib/Pitch.cpp PitchDatabase.cpp $(MYLIB) -o $@ $(LIBS)
