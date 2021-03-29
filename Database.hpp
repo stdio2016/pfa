@@ -4,8 +4,8 @@
 #include "Landmark.hpp"
 
 struct match_t {
-  int offset;
-  int score;
+  int32_t offset;
+  int32_t score;
 };
 
 class Database {

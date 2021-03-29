@@ -197,6 +197,13 @@ int main(int argc, char const *argv[]) {
     fout << '\n';
   }
   fout.close();
+  
+  fout.open( argv[3] + std::string(".bin"), std::ios::binary );
+  if (fout) {
+    fout.write((char*)(&scores[0]), sizeof(scores[0]) * scores.size());
+    fout.close();
+  }
+  
   printf("Total time: %.3fs\n", timing.getRunTime() * 0.001);
   return 0;
 }
