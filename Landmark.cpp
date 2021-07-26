@@ -178,6 +178,7 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
       Peak peak;
       peak.time = i / nFreq;
       peak.freq = i % nFreq;
+      peak.energy = spec[i];
       peaks.push_back(peak);
     }
   }
@@ -196,14 +197,14 @@ std::vector<Landmark> LandmarkBuilder::peaks_to_landmarks(const std::vector<Peak
       Landmark lm;
       lm.time1 = peaks[i].time;
       lm.freq1 = peaks[i].freq;
+      lm.energy1 = peaks[i].energy;
       lm.time2 = peaks[j].time;
       lm.freq2 = peaks[j].freq;
+      lm.energy2 = peaks[j].energy;
       int dt = lm.time2 - lm.time1;
       int df = lm.freq2 - lm.freq1;
       if (lm.time2 - lm.time1 <= LM_DT_MAX) {
         if (lm.time2 - lm.time1 >= LM_DT_MIN && abs(df) < LM_DF_MAX) {
-          int dist = peaks[j].time * (FFT_SIZE/2+1) + peaks[j].freq;
-          lm.time1 = dist;
           lm_to_sort.push_back(lm);
         }
       }
@@ -211,11 +212,10 @@ std::vector<Landmark> LandmarkBuilder::peaks_to_landmarks(const std::vector<Peak
     }
     std::sort(lm_to_sort.begin(), lm_to_sort.end(), [this](Landmark a, Landmark b) {
       // sort by energy
-      return spec[a.time1] > spec[b.time1];
+      return a.energy2 > b.energy2;
     });
     int cnt = 0;
     for (Landmark lm : lm_to_sort) {
-      lm.time1 = peaks[i].time;
       lms.push_back(lm);
       cnt += 1;
       if (cnt >= FAN_COUNT) break;

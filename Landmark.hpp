@@ -7,13 +7,16 @@
 struct Peak {
   int32_t time;
   int32_t freq;
+  float energy;
 };
 
 struct Landmark {
   int32_t time1;
   int32_t freq1;
+  float energy1;
   int32_t time2;
   int32_t freq2;
+  float energy2;
 };
 
 class LandmarkBuilder {
