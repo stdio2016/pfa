@@ -5,6 +5,7 @@
 #include "lib/Signal.hpp"
 #include "lib/BmpReader.h"
 #include "lib/Timing.hpp"
+#include "lib/utils.hpp"
 #include "Landmark.hpp"
 
 template<typename T>
@@ -129,8 +130,7 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
   // my spectrogram is not normalized
   db_min += log10(FFT_SIZE/2) * 20;
   this->rms = sqrt(totle);
-  if (log_file)
-    fprintf(log_file, "get rms %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("get rms %.3fms", tm.getRunTime());
   
   tm.getRunTime();
   FFT<double> fft(FFT_SIZE/2);
@@ -156,20 +156,17 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
     }
     blockn += 1;
   }
-  if (log_file)
-    fprintf(log_file, "fft %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("fft %.3fms", tm.getRunTime());
   
   tm.getRunTime();
   for (int i = 0; i < blockn * nFreq; i++) {
     spec[i] = log10(spec[i]) * 10;
   }
-  if (log_file)
-    fprintf(log_file, "log %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("log %.3fms", tm.getRunTime());
   
   tm.getRunTime();
   std::vector<double> local_max = max_filter(spec, blockn, nFreq, PEAK_NEIGHBORHOOD_SIZE_TIME, PEAK_NEIGHBORHOOD_SIZE_FREQ);
-  if (log_file)
-    fprintf(log_file, "max filter %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("max filter %.3fms", tm.getRunTime());
   
   tm.getRunTime();
   std::vector<Peak> peaks;
@@ -182,8 +179,7 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
       peaks.push_back(peak);
     }
   }
-  if (log_file)
-    fprintf(log_file, "find peak %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("find peak %.3fms", tm.getRunTime());
   return peaks;
 }
 
@@ -253,6 +249,5 @@ void LandmarkBuilder::drawSpecgram(const char *name, std::vector<Peak> peaks) {
   }
   BmpReader br;
   br.WriteBMP(name, blockn, nFreq, bmp.data());
-  if (log_file)
-    fprintf(log_file, "write spectrogram %.2fms\n", tm.getRunTime());
+  LOG_DEBUG("write spectrogram %.2fms", tm.getRunTime());
 }
