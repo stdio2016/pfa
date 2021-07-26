@@ -1,3 +1,4 @@
+// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp
 #include <cmath>
 #include <stdio.h>
 #include <ctime>
@@ -9,12 +10,16 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
+#include <functional>
 #include "lib/ReadAudio.hpp"
 #include "lib/Timing.hpp"
 #include "lib/Signal.hpp"
 #include "Landmark.hpp"
 #include "lib/utils.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -112,7 +117,7 @@ void createDirIfNotExist(const char *name) {
   struct stat st = {0};
   if (stat(name, &st) == -1) {
     #ifdef _WIN32
-    mkdir(name);
+    CreateDirectory(name, NULL);
     #else
     mkdir(name, 0755);
     #endif

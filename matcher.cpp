@@ -1,3 +1,4 @@
+// cl /EHsc /O2 matcher.cpp Landmark.cpp Database.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp
 #include <cmath>
 #include <stdio.h>
 #include <cstdint>

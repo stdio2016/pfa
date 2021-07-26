@@ -93,7 +93,7 @@ std::vector<double> getPitch(
   // compute global maximum
   double globalVol = 0;
   for (int i = 0; i < buf.size(); i++) {
-    globalVol = std::max(globalVol, fabs(buf[i]));
+    globalVol = std::max(globalVol, (double)fabs(buf[i]));
   }
   
   // hann window

@@ -2,6 +2,7 @@
 *.o
 *.out
 *.wav
+*.obj
 
 builder
 matcher
