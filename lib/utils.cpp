@@ -1,5 +1,11 @@
 #include <cstring>
 #include <stdio.h>
+#include <ctime>
+#include <string>
+#include <cstdarg>
+#include <omp.h>
+
+static FILE *log_file;
 
 wchar_t *utf8_to_wchar(const char *str) {
   size_t need = 0;
@@ -54,4 +60,53 @@ wchar_t *utf8_to_wchar(const char *str) {
   }
   out[need] = 0;
   return out;
+}
+
+#ifdef _WIN32
+static struct tm* localtime_r(time_t *timep, struct tm *result) {
+  localtime_s(result, timep);
+  return result;
+}
+#endif
+
+void init_logger(const char *app_name) {
+  // use current time for log name
+  time_t start_time;
+  time(&start_time);
+  char namebuf[100];
+  struct tm timeinfo;
+  localtime_r(&start_time, &timeinfo);
+  strftime(namebuf, 98, "%Y%m%d-%H%M%S", &timeinfo);
+  
+  std::string path = "logs/";
+  path = path + app_name + "-" + namebuf + ".log";
+  log_file = fopen(path.c_str(), "w");
+}
+
+void mylogger(int level, const char *fmt, ...) {
+  va_list ap;
+  if (!log_file) return;
+  
+  time_t start_time;
+  time(&start_time);
+  char namebuf[100];
+  struct tm timeinfo;
+  localtime_r(&start_time, &timeinfo);
+  strftime(namebuf, 98, "%H:%M:%S", &timeinfo);
+  
+  char *severity = "TRACE";
+  if (level == 1) severity = "DEBUG";
+  if (level == 2) severity = "INFO";
+  if (level == 3) severity = "WARN";
+  if (level == 4) severity = "ERROR";
+  if (level == 5) severity = "FATAL";
+  
+  #pragma omp critical(mylogger)
+  {
+    va_start(ap, fmt);
+    fprintf(log_file, "[%s] [thread %d/%s]: ", namebuf, omp_get_thread_num(), severity);
+    vfprintf(log_file, fmt, ap);
+    va_end(ap);
+    fputc('\n', log_file);
+  }
 }

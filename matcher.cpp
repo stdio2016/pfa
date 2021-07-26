@@ -61,10 +61,8 @@ std::vector<Landmark> getLandmarks(
     fclose(fout);
   }
 
-  if (builder.log_file) {
-    fprintf(builder.log_file, "compute %s rms=%.2fdB peak=%d landmarks=%d\n", shortname.c_str(),
+  LOG_DEBUG("compute %s rms=%.2fdB peak=%d landmarks=%d", shortname.c_str(),
       log10(rms) * 20, (int)peaks_cum.size(), (int)lms_cum.size());
-  }
   
   return lms_cum;
 }
@@ -78,8 +76,7 @@ int processQuery(
   Timing tm;
   try {
     Sound snd = ReadAudio(name.c_str());
-    if (builder.log_file)
-      fprintf(builder.log_file, "read file %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("read file %.3fms", tm.getRunTime());
 
     tm.getRunTime();
     size_t len = snd.length();
@@ -92,8 +89,7 @@ int processQuery(
       snd.d[0][i] *= 1.0 / channels;
     }
     snd.d.resize(1);
-    if (builder.log_file)
-      fprintf(builder.log_file, "stereo to mono %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("stereo to mono %.3fms", tm.getRunTime());
 
     tm.getRunTime();
     channels = 1;
@@ -106,19 +102,16 @@ int processQuery(
       //  snd.d[i] = lopass(snd.d[i], rate, 50);
     }
     len = snd.length();
-    if (builder.log_file)
-      fprintf(builder.log_file, "resample %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("resample %.3fms", tm.getRunTime());
     
     std::vector<Landmark> lms = getLandmarks(name, snd.d[0], builder);
     
-    int which = db.query_landmarks(lms, scores, builder.log_file);
+    int which = db.query_landmarks(lms, scores);
     return which;
   }
   catch (std::runtime_error x) {
     printf("%s\n", x.what());
-    if (builder.log_file) {
-      fprintf(builder.log_file, "%s\n", x.what());
-    }
+    LOG_DEBUG("%s", x.what());
   }
   return -1;
 }
@@ -154,24 +147,13 @@ int main(int argc, char const *argv[]) {
   printf("load database %.3fs\n", timing2.getRunTime() * 0.0011);
   
   LandmarkBuilder builder;
-  time_t start_time;
-  time(&start_time);
-  char namebuf[100];
-  struct tm timeinfo = *localtime(&start_time);
-  strftime(namebuf, 98, "%Y%m%d-%H%M%S", &timeinfo);
+  init_logger("matcher");
   #pragma omp parallel firstprivate(builder)
   {
-    std::stringstream ss;
-    ss << "logs/" << "matcher" << namebuf;
-    ss << "t" << omp_get_thread_num();
-    ss << ".log";
-    builder.log_file = fopen(ss.str().c_str(), "w");
-    
     #pragma omp for schedule(dynamic)
     for (int i = 0; i < queryList.size(); i++) {
       std::string name = queryList[i];
-      if (builder.log_file)
-        fprintf(builder.log_file, "File: %s\n", name.c_str());
+      LOG_DEBUG("File: %s", name.c_str());
       fprintf(stdout, "File: %s\n", name.c_str());
       result[i] = processQuery(name, builder, db, &scores[i*nSongs]);
       if (result[i] >= 0 && result[i] < nSongs) {
@@ -181,7 +163,6 @@ int main(int argc, char const *argv[]) {
         printf("%s\t%s\n", name.c_str(), "error");
       }
     }
-    if (builder.log_file) fclose(builder.log_file);
   }
   
   std::ofstream fout(argv[3]);

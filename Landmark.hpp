@@ -2,17 +2,18 @@
 // use algorithm from https://github.com/worldveil/dejavu
 #include <vector>
 #include <stdio.h>
+#include <cstdint>
 
 struct Peak {
-  int time;
-  int freq;
+  int32_t time;
+  int32_t freq;
 };
 
 struct Landmark {
-  int time1;
-  int freq1;
-  int time2;
-  int freq2;
+  int32_t time1;
+  int32_t freq1;
+  int32_t time2;
+  int32_t freq2;
 };
 
 class LandmarkBuilder {

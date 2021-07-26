@@ -3,6 +3,7 @@
 #include <string>
 #include "Database.hpp"
 #include "lib/Timing.hpp"
+#include "lib/utils.hpp"
 
 int Database::load(std::string dir) {
   std::ifstream flist;
@@ -42,7 +43,7 @@ int Database::load(std::string dir) {
   
   int key_n = 1<<24;
   db_key.resize(key_n + 1);
-  std::ifstream fin(dir + "/landmarkKey.lmdb");
+  std::ifstream fin(dir + "/landmarkKey.lmdb", std::ifstream::binary);
   if (!fin) {
     printf("cannot read landmarkKey!\n");
     return 1;
@@ -60,7 +61,7 @@ int Database::load(std::string dir) {
   printf("keys = %lld\n", db_key[key_n]);
   
   db_val.resize(sum);
-  fin.open(dir + "/landmarkValue.lmdb");
+  fin.open(dir + "/landmarkValue.lmdb", std::ifstream::binary);
   if (!fin) {
     printf("cannot read landmarkValue!\n");
     return 1;
@@ -76,8 +77,7 @@ int Database::load(std::string dir) {
 
 int Database::query_landmarks(
     const std::vector<Landmark> &lms,
-    match_t *out_scores,
-    FILE *log_file
+    match_t *out_scores
 ) const {
   int nSongs = songList.size();
   Timing tm;
@@ -93,8 +93,7 @@ int Database::query_landmarks(
       if (songId < nSongs) hist[songId] += 1;
     }
   }
-  if (log_file)
-    fprintf(log_file, "compute histogram %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("compute histogram %.3fms", tm.getRunTime());
   // counting sort
   for (int i = nSongs; i > 0; i--) hist[i] = hist[i-1];
   hist[0] = 0;
@@ -119,8 +118,7 @@ int Database::query_landmarks(
       }
     }
   }
-  if (log_file)
-    fprintf(log_file, "counting sort %.3fms\n", tm.getRunTime());
+  LOG_DEBUG("counting sort %.3fms", tm.getRunTime());
   
   for (int i = nSongs; i > 0; i--) hist[i] = hist[i-1];
   hist[0] = 0;
@@ -151,9 +149,7 @@ int Database::query_landmarks(
       which = i;
     }
   }
-  if (log_file) {
-    fprintf(log_file, "sort by time %.3fms\n", tm.getRunTime());
-    fprintf(log_file, "best match: %d score=%d\n", which, all_song_score);
-  }
+  LOG_DEBUG("sort by time %.3fms", tm.getRunTime());
+  LOG_DEBUG("best match: %d score=%d", which, all_song_score);
   return which;
 }

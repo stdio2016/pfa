@@ -22,7 +22,6 @@ public:
   
   int query_landmarks(
     const std::vector<Landmark> &lms,
-    match_t *out_scores,
-    FILE *log_file
+    match_t *out_scores
   ) const;
 };

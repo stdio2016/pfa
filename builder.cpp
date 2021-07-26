@@ -28,8 +28,7 @@ void processMusic(std::string name, LandmarkBuilder builder,
   Timing tm;
   try {
     Sound snd = ReadAudio(name.c_str());
-    if (builder.log_file)
-      fprintf(builder.log_file, "read file %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("read file %.3fms", tm.getRunTime());
 
     tm.getRunTime();
     size_t len = snd.length();
@@ -42,8 +41,7 @@ void processMusic(std::string name, LandmarkBuilder builder,
       snd.d[0][i] *= 1.0 / channels;
     }
     snd.d.resize(1);
-    if (builder.log_file)
-      fprintf(builder.log_file, "stereo to mono %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("stereo to mono %.3fms", tm.getRunTime());
 
     tm.getRunTime();
     channels = 1;
@@ -55,15 +53,13 @@ void processMusic(std::string name, LandmarkBuilder builder,
       //if (rate < 1)
       //  snd.d[i] = lopass(snd.d[i], rate, 50);
     }
-    if (builder.log_file)
-      fprintf(builder.log_file, "resample %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("resample %.3fms", tm.getRunTime());
     
     std::vector<Peak> peaks = builder.find_peaks(snd.d[0]);
     
     tm.getRunTime();
     std::vector<Landmark> lms = builder.peaks_to_landmarks(peaks);
-    if (builder.log_file)
-      fprintf(builder.log_file, "create landmark pairs %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("create landmark pairs %.3fms", tm.getRunTime());
     
     std::string bmpName = name.substr(0, name.size()-4) + "_spec.bmp";
     //builder.drawSpecgram(bmpName.c_str(), peaks);
@@ -96,20 +92,15 @@ void processMusic(std::string name, LandmarkBuilder builder,
       
       db[f1].push_back(key<<32 | value);
     }
-    if (builder.log_file)
-      fprintf(builder.log_file, "add landmark to database %.3fms\n", tm.getRunTime());
+    LOG_DEBUG("add landmark to database %.3fms", tm.getRunTime());
     
-    if (builder.log_file) {
-      fprintf(builder.log_file, "compute %s duration=%.3fs rms=%.2fdB peak=%d landmarks=%d\n", shortname.c_str(),
+    LOG_DEBUG("compute %s duration=%.3fs rms=%.2fdB peak=%d landmarks=%d", shortname.c_str(),
         (double)len / snd.sampleRate,
         log10(builder.rms) * 20, (int)peaks.size(), (int)lms.size());
-    }
   }
   catch (std::runtime_error x) {
     printf("%s\n", x.what());
-    if (builder.log_file) {
-      fprintf(builder.log_file, "%s\n", x.what());
-    }
+    LOG_DEBUG("%s", x.what());
   }
 }
 
@@ -274,12 +265,7 @@ int main(int argc, char const *argv[]) {
   Timing timing, timing2;
   LandmarkBuilder builder;
   
-  // use current time for log name
-  time_t start_time;
-  time(&start_time);
-  char namebuf[100];
-  struct tm timeinfo = *localtime(&start_time);
-  strftime(namebuf, 98, "%Y%m%d-%H%M%S", &timeinfo);
+  init_logger("builder");
   
   int nthreads = omp_get_max_threads();
   std::vector<int> dumpCount(nthreads);
@@ -288,19 +274,13 @@ int main(int argc, char const *argv[]) {
   #pragma omp parallel firstprivate(builder)
   {
     int tid = omp_get_thread_num();
-    std::stringstream ss;
-    ss << "logs/" << "builder" << namebuf;
-    ss << "t" << tid;
-    ss << ".log";
-    builder.log_file = fopen(ss.str().c_str(), "w");
     
     std::vector<std::vector<uint64_t> > db(512);
     
     #pragma omp for schedule(dynamic)
     for (int i = 0; i < filenames.size(); i++) {
       std::string name = filenames[i];
-      if (builder.log_file)
-        fprintf(builder.log_file, "File: %s\n", name.c_str());
+      LOG_DEBUG("File: %s", name.c_str());
       fprintf(stdout, "File: %s\n", name.c_str());
       processMusic(name, builder, db, i);
       long long nentries = 0;
@@ -313,23 +293,13 @@ int main(int argc, char const *argv[]) {
         dumpCount[tid] += 1;
         dumpPartialDB(db, tid, dumpCount[tid], db_location);
         for (int j = 0; j < db.size(); j++) db[j].clear();
-        if (builder.log_file)
-          fprintf(builder.log_file, "sort keys %.3fms\n", tt.getRunTime());
+        LOG_DEBUG("sort keys %.3fms", tt.getRunTime());
       }
     }
     Timing tt;
     dumpCount[tid] += 1;
     dumpPartialDB(db, tid, dumpCount[tid], db_location);
-    if (builder.log_file)
-      fprintf(builder.log_file, "sort keys %.3fms\n", tt.getRunTime());
-    
-    if (builder.log_file) {
-      for (int i = 0; i < db.size(); i++) {
-        fprintf(builder.log_file, "freq=%3d landmarks=%d\n", i, (int)db[i].size());
-      }
-    }
-    
-    if (builder.log_file) fclose(builder.log_file);
+    LOG_DEBUG("sort keys %.3fms", tt.getRunTime());
   }
   printf("compute landmark time: %.3fs\n", timing.getRunTime() * 0.001);
   
