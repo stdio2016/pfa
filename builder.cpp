@@ -1,4 +1,4 @@
-// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp
+// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Sound.cpp
 #include <cmath>
 #include <stdio.h>
 #include <ctime>
@@ -32,19 +32,11 @@ void processMusic(std::string name, LandmarkBuilder builder,
 
     tm.getRunTime();
     size_t len = snd.length();
-    int channels = snd.numberOfChannels();
-    for (int i = 1; i < channels; i++) {
-      for (int j = 0; j < len; j++)
-        snd.d[0][j] += snd.d[i][j];
-    }
-    for (int i = 0; i < len; i++) {
-      snd.d[0][i] *= 1.0 / channels;
-    }
-    snd.d.resize(1);
+    snd.stereo_to_mono_();
     LOG_DEBUG("stereo to mono %.3fms", tm.getRunTime());
 
     tm.getRunTime();
-    channels = 1;
+    int channels = 1;
     double rate = (double)snd.sampleRate / (double)builder.SAMPLE_RATE;
     for (int i = 0; i < channels; i++) {
       //if (rate > 1)
@@ -235,7 +227,7 @@ int compressDatabase(
 
 int main(int argc, char const *argv[]) {
   if (argc < 3) {
-    printf("Usage: ./a.out <music list file> <db location>\n");
+    printf("Usage: ./builder <music list file> <db location>\n");
     return 1;
   }
   const char *db_location = argv[2];
@@ -244,6 +236,7 @@ int main(int argc, char const *argv[]) {
     printf("cannot read music list!\n");
     return 1;
   }
+  createDirIfNotExist(db_location);
   std::ofstream flistOut(db_location + std::string("/songList.txt"));
   if (!flistOut) {
     printf("cannot write music list!\n");
@@ -251,7 +244,6 @@ int main(int argc, char const *argv[]) {
   }
   createDirIfNotExist("lm");
   createDirIfNotExist("logs");
-  createDirIfNotExist(db_location);
   std::string line;
   std::vector<std::string> filenames;
   while (std::getline(flist, line)) {
@@ -260,7 +252,7 @@ int main(int argc, char const *argv[]) {
   }
   flist.close();
   flistOut.close();
-  printf("list contains %d songs\n", filenames.size());
+  printf("list contains %d songs\n", (int)filenames.size());
   
   Timing timing, timing2;
   LandmarkBuilder builder;

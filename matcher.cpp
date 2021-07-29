@@ -1,4 +1,4 @@
-// cl /EHsc /O2 matcher.cpp Landmark.cpp Database.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp
+// cl /EHsc /O2 matcher.cpp Landmark.cpp Database.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp lib/Sound.cpp
 #include <cmath>
 #include <stdio.h>
 #include <cstdint>
@@ -79,20 +79,11 @@ int processQuery(
     LOG_DEBUG("read file %.3fms", tm.getRunTime());
 
     tm.getRunTime();
-    size_t len = snd.length();
-    int channels = snd.numberOfChannels();
-    for (int i = 1; i < channels; i++) {
-      for (int j = 0; j < len; j++)
-        snd.d[0][j] += snd.d[i][j];
-    }
-    for (int i = 0; i < len; i++) {
-      snd.d[0][i] *= 1.0 / channels;
-    }
-    snd.d.resize(1);
+    snd.stereo_to_mono_();
     LOG_DEBUG("stereo to mono %.3fms", tm.getRunTime());
 
     tm.getRunTime();
-    channels = 1;
+    int channels = 1;
     double rate = (double)snd.sampleRate / (double)builder.SAMPLE_RATE;
     for (int i = 0; i < channels; i++) {
       //if (rate > 1)
@@ -101,7 +92,6 @@ int processQuery(
       //if (rate < 1)
       //  snd.d[i] = lopass(snd.d[i], rate, 50);
     }
-    len = snd.length();
     LOG_DEBUG("resample %.3fms", tm.getRunTime());
     
     std::vector<Landmark> lms = getLandmarks(name, snd.d[0], builder);

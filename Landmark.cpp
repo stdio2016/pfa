@@ -126,7 +126,7 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
   }
   totle /= len;
   // only peaks above db_min are considered fingerprints
-  double db_min = log10(totle) * 10 - 60;
+  double db_min = std::max(log10(totle) * 10 - log10(FFT_SIZE) * 20, -99.0);
   // my spectrogram is not normalized
   db_min += log10(FFT_SIZE/2) * 20;
   this->rms = sqrt(totle);

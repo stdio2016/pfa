@@ -31,7 +31,6 @@ public:
   int LM_DT_MAX = 35;
   int LM_DT_MIN = 6;
   int LM_DF_MAX = 127;
-  FILE *log_file = NULL;
   
   std::vector<Peak> find_peaks(const std::vector<float> &sample);
   

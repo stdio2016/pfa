@@ -94,7 +94,7 @@ void mylogger(int level, const char *fmt, ...) {
   localtime_r(&start_time, &timeinfo);
   strftime(namebuf, 98, "%H:%M:%S", &timeinfo);
   
-  char *severity = "TRACE";
+  const char *severity = "TRACE";
   if (level == 1) severity = "DEBUG";
   if (level == 2) severity = "INFO";
   if (level == 3) severity = "WARN";

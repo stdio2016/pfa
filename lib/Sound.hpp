@@ -24,4 +24,6 @@ public:
   inline size_t length() const {
     return d[0].size();
   }
+  
+  void stereo_to_mono_(void);
 };

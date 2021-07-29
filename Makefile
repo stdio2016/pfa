@@ -1,6 +1,6 @@
-MYLIB := lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp
+MYLIB := lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp lib/Sound.cpp
 
-HEADERS := lib/WavReader.hpp lib/Timing.hpp lib/ReadAudio.hpp lib/BmpReader.h lib/Signal.hpp lib/utils.hpp lib/Pitch.hpp
+HEADERS := lib/WavReader.hpp lib/Timing.hpp lib/ReadAudio.hpp lib/BmpReader.h lib/Signal.hpp lib/utils.hpp lib/Pitch.hpp lib/Sound.hpp
 HEADERS += Landmark.hpp Database.hpp PitchDatabase.hpp
 
 CXXFLAGS := -O3 -fopenmp
