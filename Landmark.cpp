@@ -133,34 +133,15 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
   LOG_DEBUG("get rms %.3fms", tm.getRunTime());
   
   tm.getRunTime();
-  FFT<double> fft(FFT_SIZE/2);
-  // hann window
-  std::vector<double> window(FFT_SIZE);
-  for (int i = 0; i < FFT_SIZE; i++) {
-    window[i] = 0.5 * (1 - cos(2 * 3.14159265359 * i / FFT_SIZE));
-  }
-  
-  std::vector<double> out(FFT_SIZE), in(FFT_SIZE);
   int nFreq = FFT_SIZE/2 + 1;
-  this->spec = std::vector<double>((len-NOVERLAP) / (FFT_SIZE-NOVERLAP) * nFreq);
-  int blockn = 0;
-  for (int i = 0; i + FFT_SIZE <= len; i += FFT_SIZE-NOVERLAP) {
-    for (int j = 0; j < FFT_SIZE; j++) {
-      in[j] = sample[i+j] * window[j];
-    }
-    fft.realFFT(in.data(), out.data());
-    spec[0 + nFreq * blockn] = out[0] * out[0] + 1e-10;
-    spec[FFT_SIZE/2 + nFreq * blockn] = out[1] * out[1] + 1e-10;
-    for (int j = 2; j < FFT_SIZE; j+=2) {
-      spec[j/2 + nFreq * blockn] = out[j] * out[j] + out[j+1] * out[j+1] + 1e-10;
-    }
-    blockn += 1;
-  }
+  size_t blockn = specgram_num_frames(sample.size(), FFT_SIZE, NOVERLAP);
+  this->spec = std::vector<double>(blockn * nFreq);
+  specgram(sample.data(), sample.size(), FFT_SIZE, NOVERLAP, spec.data());
   LOG_DEBUG("fft %.3fms", tm.getRunTime());
   
   tm.getRunTime();
-  for (int i = 0; i < blockn * nFreq; i++) {
-    spec[i] = log10(spec[i]) * 10;
+  for (size_t i = 0; i < blockn * nFreq; i++) {
+    spec[i] = log10(spec[i] + 1e-10) * 10;
   }
   LOG_DEBUG("log %.3fms", tm.getRunTime());
   
@@ -170,7 +151,7 @@ std::vector<Peak> LandmarkBuilder::find_peaks(const std::vector<float> &sample) 
   
   tm.getRunTime();
   std::vector<Peak> peaks;
-  for (int i = 0; i < blockn * nFreq; i++) {
+  for (size_t i = 0; i < blockn * nFreq; i++) {
     if (spec[i] == local_max[i] && spec[i] > db_min) {
       Peak peak;
       peak.time = i / nFreq;

@@ -1,5 +1,7 @@
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include "Signal.hpp"
+#include "fft.hpp"
 
 std::vector<float> lopass(const std::vector<float> &snd, double ratio, int firSize) {
   std::vector<float> fir(firSize*2+1);
@@ -47,4 +49,33 @@ std::vector<float> resample(const std::vector<float> &snd, int from, int to) {
     }
   }
   return out;
+}
+
+size_t specgram_num_frames(size_t x_len, int NFFT, int noverlap) {
+  return (x_len - noverlap) / (NFFT - noverlap);
+}
+
+void specgram(const float *x, size_t x_len, int NFFT, int noverlap, double *out) {
+  FFT<double> fft(NFFT/2);
+  // hann window
+  std::vector<double> window(NFFT);
+  for (int i = 0; i < NFFT; i++) {
+    window[i] = 0.5 * (1 - cos(2 * M_PI * i / NFFT));
+  }
+  
+  std::vector<double> tmp(NFFT);
+  size_t nFreq = NFFT/2 + 1;
+  size_t blockn = 0;
+  for (size_t i = 0; i + NFFT <= x_len; i += NFFT-noverlap) {
+    for (size_t j = 0; j < NFFT; j++) {
+      tmp[j] = x[i+j] * window[j];
+    }
+    fft.realFFT(tmp.data(), tmp.data());
+    out[0 + nFreq * blockn] = tmp[0] * tmp[0];
+    for (size_t j = 2; j < NFFT; j += 2) {
+      out[j/2 + nFreq * blockn] = tmp[j] * tmp[j] + tmp[j+1] * tmp[j+1];
+    }
+    out[NFFT/2 + nFreq * blockn] = tmp[1] * tmp[1];
+    blockn += 1;
+  }
 }
