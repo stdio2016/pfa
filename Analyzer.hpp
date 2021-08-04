@@ -14,7 +14,7 @@ public:
   
   std::vector<Peak> peaks;
   
-  std::vector<Landmark> Analyzer::fingerprint_file(const char *name);
+  std::vector<Landmark> fingerprint_file(const char *name);
   
-  std::vector<Landmark> Analyzer::fingerprint_waveform(const float *wave, size_t len);
+  std::vector<Landmark> fingerprint_waveform(const float *wave, size_t len);
 };

@@ -23,7 +23,7 @@ std::vector<Peak> PeakFinderDejavu::find_peaks(const float *sample, size_t len) 
   // only peaks above db_min are considered fingerprints
   double db_min = std::max(log10(totle) * 10 - 60, -99.0);
   // my spectrogram is not normalized
-  db_min += log10(FFT_SIZE/2) * 20;
+  double dB_offset = log10(FFT_SIZE/2) * 20;
   this->rms = sqrt(totle);
   LOG_DEBUG("get rms %.3fms rms=%.1fdB", tm.getRunTime(), log10(rms) * 20);
   
@@ -36,7 +36,7 @@ std::vector<Peak> PeakFinderDejavu::find_peaks(const float *sample, size_t len) 
   
   tm.getRunTime();
   for (size_t i = 0; i < blockn * nFreq; i++) {
-    spec[i] = log10(spec[i] + 1e-10) * 10;
+    spec[i] = log10(spec[i] + 1e-10) * 10 - dB_offset;
   }
   LOG_DEBUG("log %.3fms", tm.getRunTime());
   

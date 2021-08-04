@@ -24,9 +24,8 @@ void PeakFinder::drawSpecgram(const char *name, std::vector<Peak> peaks) {
   int blockn = spec.size() / nFreq;
   std::vector<unsigned char> bmp(blockn * nFreq * 3);
   for (int i = 0; i < blockn; i++) {
-    double dbOffset = log10(FFT_SIZE / 2) * 20;
     for (int j = 0; j < nFreq; j++) {
-      double db = spec[i * nFreq + j] - dbOffset;
+      double db = spec[i * nFreq + j];
       int idx = (i + j * blockn) * 3;
       getOldColor(db, &bmp[idx]);
     }

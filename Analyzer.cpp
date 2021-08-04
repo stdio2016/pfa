@@ -1,7 +1,7 @@
 #include "Analyzer.hpp"
 #include "lib/Sound.hpp"
 #include "lib/ReadAudio.hpp"
-#include "lib/signal.hpp"
+#include "lib/Signal.hpp"
 #include "lib/Timing.hpp"
 
 std::vector<Landmark> Analyzer::fingerprint_file(const char *name) {
