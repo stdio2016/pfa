@@ -1,7 +1,9 @@
 MYLIB := lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Pitch.cpp lib/Sound.cpp
+MYLIB += Analyzer.cpp PeakFinder.cpp PeakFinderDejavu.cpp
 
 HEADERS := lib/WavReader.hpp lib/Timing.hpp lib/ReadAudio.hpp lib/BmpReader.h lib/Signal.hpp lib/utils.hpp lib/Pitch.hpp lib/Sound.hpp
 HEADERS += Landmark.hpp Database.hpp PitchDatabase.hpp
+HEADERS += Analyzer.hpp PeakFinder.hpp PeakFinderDejavu.hpp
 
 CXXFLAGS := -O3 -fopenmp
 

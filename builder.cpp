@@ -1,4 +1,4 @@
-// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Sound.cpp
+// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Sound.cpp .\PeakFinder.cpp .\PeakFinderDejavu.cpp Analyzer.cpp
 #include <cmath>
 #include <stdio.h>
 #include <ctime>
@@ -11,11 +11,11 @@
 #include <sstream>
 #include <queue>
 #include <functional>
-#include "lib/ReadAudio.hpp"
 #include "lib/Timing.hpp"
-#include "lib/Signal.hpp"
 #include "Landmark.hpp"
 #include "lib/utils.hpp"
+#include "Analyzer.hpp"
+#include "PeakFinderDejavu.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -23,57 +23,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-void processMusic(std::string name, LandmarkBuilder builder,
+void processMusic(std::string name, Analyzer &analyzer,
     std::vector<std::vector<uint64_t> > &db, uint32_t songId) {
   Timing tm;
   try {
-    Sound snd = ReadAudio(name.c_str());
-    LOG_DEBUG("read file %.3fms", tm.getRunTime());
-
-    tm.getRunTime();
-    size_t len = snd.length();
-    snd.stereo_to_mono_();
-    LOG_DEBUG("stereo to mono %.3fms", tm.getRunTime());
-
-    tm.getRunTime();
-    int channels = 1;
-    double rate = (double)snd.sampleRate / (double)builder.SAMPLE_RATE;
-    for (int i = 0; i < channels; i++) {
-      //if (rate > 1)
-      //  snd.d[i] = lopass(snd.d[i], 1.0/rate, 50);
-      snd.d[i] = resample(snd.d[i], snd.sampleRate, builder.SAMPLE_RATE);
-      //if (rate < 1)
-      //  snd.d[i] = lopass(snd.d[i], rate, 50);
-    }
-    LOG_DEBUG("resample %.3fms", tm.getRunTime());
-    
-    std::vector<Peak> peaks = builder.find_peaks(snd.d[0]);
-    
-    tm.getRunTime();
-    std::vector<Landmark> lms = builder.peaks_to_landmarks(peaks);
+    std::vector<Landmark> lms = analyzer.fingerprint_file(name.c_str());
     LOG_DEBUG("create landmark pairs %.3fms", tm.getRunTime());
-    
-    std::string bmpName = name.substr(0, name.size()-4) + "_spec.bmp";
-    //builder.drawSpecgram(bmpName.c_str(), peaks);
     
     std::string shortname = name;
     if (shortname.find('/') != shortname.npos) {
       shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
     }
-    std::string lm_file = "lm/" + shortname + ".lm";
-#ifdef _WIN32
-    wchar_t *lm_file_w = utf8_to_wchar(lm_file.c_str());
-    FILE *fout = _wfopen(lm_file_w, L"wb");
-    delete[] lm_file_w;
-#else
-    FILE *fout = fopen(lm_file.c_str(), "wb");
-#endif
-    if (fout) {
-      fwrite(lms.data(), sizeof(Landmark), lms.size(), fout);
-      fclose(fout);
-    }
     
-    tm.getRunTime();
     for (Landmark lm : lms) {
       uint32_t dt = (lm.time2 - lm.time1) & ((1<<6)-1);
       uint32_t df = (lm.freq2 - lm.freq1) & ((1<<9)-1);
@@ -85,10 +46,6 @@ void processMusic(std::string name, LandmarkBuilder builder,
       db[f1].push_back(key<<32 | value);
     }
     LOG_DEBUG("add landmark to database %.3fms", tm.getRunTime());
-    
-    LOG_DEBUG("compute %s duration=%.3fs rms=%.2fdB peak=%d landmarks=%d", shortname.c_str(),
-        (double)len / snd.sampleRate,
-        log10(builder.rms) * 20, (int)peaks.size(), (int)lms.size());
   }
   catch (std::runtime_error x) {
     printf("%s\n", x.what());
@@ -267,6 +224,10 @@ int main(int argc, char const *argv[]) {
   {
     int tid = omp_get_thread_num();
     
+    Analyzer analyzer;
+    analyzer.peak_finder = new PeakFinderDejavu();
+    analyzer.landmark_builder = new LandmarkBuilder();
+    
     std::vector<std::vector<uint64_t> > db(512);
     
     #pragma omp for schedule(dynamic)
@@ -274,7 +235,7 @@ int main(int argc, char const *argv[]) {
       std::string name = filenames[i];
       LOG_DEBUG("File: %s", name.c_str());
       fprintf(stdout, "File: %s\n", name.c_str());
-      processMusic(name, builder, db, i);
+      processMusic(name, analyzer, db, i);
       long long nentries = 0;
       for (int j = 0; j < db.size(); j++) {
         nentries += db[j].size();
@@ -292,6 +253,8 @@ int main(int argc, char const *argv[]) {
     dumpCount[tid] += 1;
     dumpPartialDB(db, tid, dumpCount[tid], db_location);
     LOG_DEBUG("sort keys %.3fms", tt.getRunTime());
+    delete analyzer.landmark_builder;
+    delete analyzer.peak_finder;
   }
   printf("compute landmark time: %.3fs\n", timing.getRunTime() * 0.001);
   
