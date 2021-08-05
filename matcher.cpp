@@ -68,6 +68,7 @@ int main(int argc, char const *argv[]) {
   LandmarkBuilder builder;
   {
     Analyzer analyzer;
+    analyzer.REPEAT_COUNT = 4;
     analyzer.peak_finder = new PeakFinderDejavu();
     analyzer.landmark_builder = new LandmarkBuilder();
     

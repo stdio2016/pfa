@@ -24,7 +24,7 @@ std::vector<Landmark> Analyzer::fingerprint_waveform(const float *wave, size_t l
     std::vector<Peak> cur_peaks = peak_finder->find_peaks(wave + shift_n, len - shift_n);
     peaks.insert(peaks.begin(), cur_peaks.begin(), cur_peaks.end());
     
-    std::vector<Landmark> lms = landmark_builder->peaks_to_landmarks(peaks);
+    std::vector<Landmark> lms = landmark_builder->peaks_to_landmarks(cur_peaks);
     out.insert(out.end(), lms.begin(), lms.end());
   }
   return out;
