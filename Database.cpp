@@ -20,27 +20,6 @@ int Database::load(std::string dir) {
   flist.close();
   printf("nsongs %d\n", (int)songList.size());
   
-  songNameList = songList;
-  flist.open(dir + std::string("/songNameList.txt"));
-  if (flist) {
-    std::string line;
-    for (int i = 0; i < songList.size(); i++) {
-      if (std::getline(flist, line))
-        songNameList[i] = line;
-    }
-    flist.close();
-  }
-  songSrcList = songList;
-  flist.open(dir + std::string("/songSrcList.txt"));
-  if (flist) {
-    std::string line;
-    for (int i = 0; i < songList.size(); i++) {
-      if (std::getline(flist, line))
-        songSrcList[i] = line;
-    }
-    flist.close();
-  }
-  
   int key_n = 1<<24;
   db_key.resize(key_n + 1);
   std::ifstream fin(dir + "/landmarkKey.lmdb", std::ifstream::binary);
@@ -48,7 +27,7 @@ int Database::load(std::string dir) {
     printf("cannot read landmarkKey!\n");
     return 1;
   }
-  long long sum = 0;
+  uint64_t sum = 0;
   {
     std::vector<uint32_t> tmp(key_n);
     fin.read((char *)tmp.data(), sizeof(uint32_t) * key_n);
@@ -66,9 +45,9 @@ int Database::load(std::string dir) {
     printf("cannot read landmarkValue!\n");
     return 1;
   }
-  long long ptr = 0;
+  uint64_t ptr = 0;
   while (ptr < sum) {
-    int maxread = std::min(sum - ptr, 10000000LL);
+    int maxread = std::min(sum - ptr, 10000000ULL);
     fin.read((char*)(db_val.data() + ptr), maxread * sizeof(uint32_t));
     ptr += maxread;
   }
@@ -82,14 +61,14 @@ int Database::query_landmarks(
   int nSongs = songList.size();
   Timing tm;
   std::vector<int> hist(nSongs+1);
-  for (Landmark lm : lms) {
-    uint32_t dt = (lm.time2 - lm.time1) & ((1<<6)-1);
-    uint32_t df = (lm.freq2 - lm.freq1) & ((1<<9)-1);
-    uint32_t f1 = lm.freq1 & ((1<<9)-1);
-    uint32_t key = f1<<15 | df<<6 | dt;
-    for (long long it = db_key[key]; it < db_key[key+1]; it++) {
+  std::vector<uint32_t> hash(lms.size() * 2);
+  landmark_to_hash(lms.data(), lms.size(), 0, hash.data());
+  const int T1_BITS = this->T1_BITS;
+  for (size_t i = 0; i < lms.size(); i++) {
+    uint32_t key = hash[i*2];
+    for (uint64_t it = db_key[key]; it < db_key[key+1]; it++) {
       uint32_t val = db_val[it];
-      uint32_t songId = val>>14;
+      uint32_t songId = val>>T1_BITS;
       if (songId < nSongs) hist[songId] += 1;
     }
   }
@@ -100,17 +79,14 @@ int Database::query_landmarks(
   for (int i = 0; i < nSongs; i++) hist[i+1] += hist[i];
   
   std::vector<int> matches(hist[nSongs]);
-  for (Landmark lm : lms) {
-    uint32_t dt = (lm.time2 - lm.time1) & ((1<<6)-1);
-    uint32_t df = (lm.freq2 - lm.freq1) & ((1<<9)-1);
-    uint32_t f1 = lm.freq1 & ((1<<9)-1);
-    int t = lm.time1 & ((1<<14)-1);
-    uint32_t key = f1<<15 | df<<6 | dt;
+  for (size_t i = 0; i < lms.size(); i++) {
+    int t = hash[i*2+1];
+    uint32_t key = hash[i*2];
     
-    for (long long it = db_key[key]; it < db_key[key+1]; it++) {
+    for (uint64_t it = db_key[key]; it < db_key[key+1]; it++) {
       uint32_t val = db_val[it];
-      uint32_t songId = val>>14;
-      int songT = val & ((1<<14)-1);
+      uint32_t songId = val>>T1_BITS;
+      int songT = val & ((1<<T1_BITS)-1);
       if (songId < nSongs) {
         int pos = hist[songId];
         matches[pos] = songT - t;
@@ -118,7 +94,7 @@ int Database::query_landmarks(
       }
     }
   }
-  LOG_DEBUG("counting sort %.3fms", tm.getRunTime());
+  LOG_DEBUG("counting sort %.3fms items %d", tm.getRunTime(), hist[nSongs]);
   
   for (int i = nSongs; i > 0; i--) hist[i] = hist[i-1];
   hist[0] = 0;
@@ -152,4 +128,23 @@ int Database::query_landmarks(
   LOG_DEBUG("sort by time %.3fms", tm.getRunTime());
   LOG_DEBUG("best match: %d score=%d", which, all_song_score);
   return which;
+}
+
+void Database::landmark_to_hash(const Landmark *lms, size_t len, uint32_t song_id, uint32_t *hash_out) const {
+  const int T1_BITS = this->T1_BITS;
+  const int F1_BITS = this->F1_BITS;
+  const int DT_BITS = this->DT_BITS;
+  const int DF_BITS = this->DF_BITS;
+  for (size_t i = 0; i < len; i++) {
+    Landmark lm = lms[i];
+    uint32_t f1 = lm.freq1 & ((1<<F1_BITS)-1);
+    uint32_t df = (lm.freq2 - lm.freq1) & ((1<<DF_BITS)-1);
+    uint32_t dt = (lm.time2 - lm.time1) & ((1<<DT_BITS)-1);
+    uint32_t key = f1<<(DF_BITS+DT_BITS) | df<<DT_BITS | dt;
+    
+    uint32_t t1 = lm.time1 & ((1<<T1_BITS)-1);
+    uint32_t value = song_id<<T1_BITS | t1;
+    hash_out[i*2] = key;
+    hash_out[i*2+1] = value;
+  }
 }

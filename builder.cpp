@@ -1,4 +1,4 @@
-// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Sound.cpp .\PeakFinder.cpp .\PeakFinderDejavu.cpp Analyzer.cpp
+// cl /EHsc /O2 /openmp builder.cpp Landmark.cpp Database.cpp lib/WavReader.cpp lib/Timing.cpp lib/ReadAudio.cpp lib/BmpReader.cpp lib/Signal.cpp lib/utils.cpp lib/Sound.cpp PeakFinder.cpp PeakFinderDejavu.cpp Analyzer.cpp
 #include <cmath>
 #include <stdio.h>
 #include <ctime>
@@ -16,6 +16,7 @@
 #include "lib/utils.hpp"
 #include "Analyzer.hpp"
 #include "PeakFinderDejavu.hpp"
+#include "Database.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -24,7 +25,8 @@
 #include <sys/stat.h>
 
 void processMusic(std::string name, Analyzer &analyzer,
-    std::vector<std::vector<uint64_t> > &db, uint32_t songId) {
+    const Database &db_config,
+    std::vector<uint64_t> &tmp_db, uint32_t songId) {
   Timing tm;
   try {
     std::vector<Landmark> lms = analyzer.fingerprint_file(name.c_str());
@@ -35,15 +37,12 @@ void processMusic(std::string name, Analyzer &analyzer,
       shortname = shortname.substr(shortname.find_last_of('/')+1, -1);
     }
     
-    for (Landmark lm : lms) {
-      uint32_t dt = (lm.time2 - lm.time1) & ((1<<6)-1);
-      uint32_t df = (lm.freq2 - lm.freq1) & ((1<<9)-1);
-      uint32_t f1 = lm.freq1 & ((1<<9)-1);
-      uint32_t t = lm.time1 & ((1<<14)-1);
-      uint64_t key = f1<<15 | df<<6 | dt;
-      uint64_t value = songId<<14 | t;
-      
-      db[f1].push_back(key<<32 | value);
+    std::vector<uint32_t> hash(lms.size() * 2);
+    db_config.landmark_to_hash(lms.data(), lms.size(), songId, hash.data());
+    for (size_t i = 0; i < lms.size(); i++) {
+      uint64_t key = hash[i*2];
+      uint64_t value = hash[i*2+1];
+      tmp_db.push_back(key<<32 | value);
     }
     LOG_DEBUG("add landmark to database %.3fms", tm.getRunTime());
   }
@@ -70,20 +69,17 @@ void createDirIfNotExist(const char *name) {
 }
 
 void dumpPartialDB(
-    std::vector<std::vector<uint64_t> > &db,
+    std::vector<uint64_t> &db,
     int threadid,
     int dumpCount,
     const char *db_location)
 {
-  for (int j = 0; j < db.size(); j++) {
-    std::sort(db[j].begin(), db[j].end());
-  }
+  std::sort(db.begin(), db.end());
   std::stringstream ss;
   ss << db_location << "/tmp_" << threadid << "_" << dumpCount << ".lms";
   std::ofstream lm_out(ss.str().c_str(), std::ios::binary);
   if (lm_out) {
-    for (int j = 0; j < db.size(); j++)
-      lm_out.write((const char *)db[j].data(), db[j].size() * sizeof(uint64_t));
+    lm_out.write((const char *)db.data(), db.size() * sizeof(uint64_t));
   }
 }
 
@@ -219,7 +215,7 @@ int main(int argc, char const *argv[]) {
   
   Timing timing, timing2;
   LandmarkBuilder builder;
-  
+  Database db_config;
   
   int nthreads = omp_get_max_threads();
   std::vector<int> dumpCount(nthreads);
@@ -232,23 +228,20 @@ int main(int argc, char const *argv[]) {
     analyzer.peak_finder = new PeakFinderDejavu();
     analyzer.landmark_builder = new LandmarkBuilder();
     
-    std::vector<std::vector<uint64_t> > db(512);
+    std::vector<uint64_t> db;
     
     #pragma omp for schedule(dynamic)
     for (int i = 0; i < filenames.size(); i++) {
       std::string name = filenames[i];
       LOG_INFO("File: %s", name.c_str());
-      processMusic(name, analyzer, db, i);
-      long long nentries = 0;
-      for (int j = 0; j < db.size(); j++) {
-        nentries += db[j].size();
-      }
+      processMusic(name, analyzer, db_config, db, i);
+      long long nentries = db.size();
       long long maxentries = 50000 * 1000; // 50M entries ~ 400MB
       if (nentries > maxentries) {
         Timing tt;
         dumpCount[tid] += 1;
         dumpPartialDB(db, tid, dumpCount[tid], db_location);
-        for (int j = 0; j < db.size(); j++) db[j].clear();
+        db.clear();
         LOG_DEBUG("sort keys %.3fms", tt.getRunTime());
       }
     }

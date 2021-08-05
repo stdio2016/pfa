@@ -10,11 +10,15 @@ struct match_t {
 
 class Database {
 public:
-  std::vector<std::string> songList;
-  std::vector<std::string> songNameList;
-  std::vector<std::string> songSrcList;
+  // parameters
+  int F1_BITS = 9;
+  int DF_BITS = 8;
+  int DT_BITS = 7;
+  int T1_BITS = 14;
   
-  std::vector<long long> db_key;
+  std::vector<std::string> songList;
+  
+  std::vector<uint64_t> db_key;
   
   std::vector<uint32_t> db_val;
   
@@ -24,4 +28,6 @@ public:
     const std::vector<Landmark> &lms,
     match_t *out_scores
   ) const;
+  
+  void landmark_to_hash(const Landmark *lms, size_t len, uint32_t song_id, uint32_t *hash_out) const;
 };
