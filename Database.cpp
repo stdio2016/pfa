@@ -22,7 +22,7 @@ int Database::load(std::string dir) {
   
   int key_n = 1<<24;
   db_key.resize(key_n + 1);
-  std::ifstream fin(dir + "/landmarkKey.lmdb", std::ifstream::binary);
+  std::ifstream fin(dir + "/landmarkKey", std::ifstream::binary);
   if (!fin) {
     printf("cannot read landmarkKey!\n");
     return 1;
@@ -40,7 +40,7 @@ int Database::load(std::string dir) {
   printf("keys = %lld\n", db_key[key_n]);
   
   db_val.resize(sum);
-  fin.open(dir + "/landmarkValue.lmdb", std::ifstream::binary);
+  fin.open(dir + "/landmarkValue", std::ifstream::binary);
   if (!fin) {
     printf("cannot read landmarkValue!\n");
     return 1;
