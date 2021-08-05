@@ -47,7 +47,7 @@ int Database::load(std::string dir) {
   }
   uint64_t ptr = 0;
   while (ptr < sum) {
-    int maxread = std::min(sum - ptr, 10000000ULL);
+    int maxread = std::min<uint64_t>(sum - ptr, 10000000ULL);
     fin.read((char*)(db_val.data() + ptr), maxread * sizeof(uint32_t));
     ptr += maxread;
   }

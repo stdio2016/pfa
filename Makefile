@@ -13,8 +13,8 @@ else
 	LIBS +=
 endif
 
-builder: builder.cpp Landmark.cpp $(MYLIB) Makefile $(HEADERS)
-	$(CXX) $(CXXFLAGS) builder.cpp Landmark.cpp $(MYLIB) -o $@ $(LIBS)
+builder: builder.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
+	$(CXX) $(CXXFLAGS) builder.cpp Landmark.cpp Database.cpp $(MYLIB) -o $@ $(LIBS)
 
 matcher: matcher.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) matcher.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
