@@ -48,8 +48,7 @@ void processMusic(std::string name, Analyzer &analyzer,
     LOG_DEBUG("add landmark to database %.3fms", tm.getRunTime());
   }
   catch (std::runtime_error x) {
-    printf("%s\n", x.what());
-    LOG_DEBUG("%s", x.what());
+    LOG_ERROR("%s", x.what());
   }
 }
 
@@ -57,9 +56,15 @@ void createDirIfNotExist(const char *name) {
   struct stat st = {0};
   if (stat(name, &st) == -1) {
     #ifdef _WIN32
-    CreateDirectory(name, NULL);
+    int status = CreateDirectory(name, NULL);
+    if (status == 0) {
+      LOG_ERROR("Cannot create directory %s", name);
+    }
     #else
-    mkdir(name, 0755);
+    int status = mkdir(name, 0755);
+    if (status != 0) {
+      LOG_ERROR("Cannot create directory %s", name);
+    }
     #endif
   }
 }
@@ -184,23 +189,24 @@ int compressDatabase(
 
 int main(int argc, char const *argv[]) {
   if (argc < 3) {
-    printf("Usage: ./builder <music list file> <db location>\n");
+    fprintf(stderr, "Usage: ./builder <music list file> <db location>\n");
     return 1;
   }
   const char *db_location = argv[2];
   std::ifstream flist(argv[1]);
   if (!flist) {
-    printf("cannot read music list!\n");
+    fprintf(stderr, "cannot read music list!\n");
     return 1;
   }
   createDirIfNotExist(db_location);
   std::ofstream flistOut(db_location + std::string("/songList.txt"));
   if (!flistOut) {
-    printf("cannot write music list!\n");
+    fprintf(stderr, "cannot write music list!\n");
     return 1;
   }
   createDirIfNotExist("lm");
   createDirIfNotExist("logs");
+  init_logger("builder");
   std::string line;
   std::vector<std::string> filenames;
   while (std::getline(flist, line)) {
@@ -209,17 +215,15 @@ int main(int argc, char const *argv[]) {
   }
   flist.close();
   flistOut.close();
-  printf("list contains %d songs\n", (int)filenames.size());
+  LOG_DEBUG("list contains %d songs", (int)filenames.size());
   
   Timing timing, timing2;
   LandmarkBuilder builder;
   
-  init_logger("builder");
   
   int nthreads = omp_get_max_threads();
   std::vector<int> dumpCount(nthreads);
   
-  printf("computing landmarks...\n");
   #pragma omp parallel firstprivate(builder)
   {
     int tid = omp_get_thread_num();
@@ -233,8 +237,7 @@ int main(int argc, char const *argv[]) {
     #pragma omp for schedule(dynamic)
     for (int i = 0; i < filenames.size(); i++) {
       std::string name = filenames[i];
-      LOG_DEBUG("File: %s", name.c_str());
-      fprintf(stdout, "File: %s\n", name.c_str());
+      LOG_INFO("File: %s", name.c_str());
       processMusic(name, analyzer, db, i);
       long long nentries = 0;
       for (int j = 0; j < db.size(); j++) {
@@ -256,9 +259,8 @@ int main(int argc, char const *argv[]) {
     delete analyzer.landmark_builder;
     delete analyzer.peak_finder;
   }
-  printf("compute landmark time: %.3fs\n", timing.getRunTime() * 0.001);
+  LOG_INFO("compute landmark time: %.3fs", timing.getRunTime() * 0.001);
   
-  printf("merge landmark files...\n");
   std::vector<std::string> tmp_lms;
   for (int i = 0; i < dumpCount.size(); i++) {
     for (int j = 1; j <= dumpCount[i]; j++) {
@@ -268,22 +270,21 @@ int main(int argc, char const *argv[]) {
     }
   }
   if (merge_db(tmp_lms, db_location + std::string("/landmarks.lms"))) {
-    printf("merge failed!\n");
+    LOG_FATAL("merge failed!");
     return 1;
   }
-  printf("merge landmark files time: %.3fs\n", timing.getRunTime() * 0.001);
+  LOG_INFO("merge landmark files time: %.3fs", timing.getRunTime() * 0.001);
   
-  printf("compressing database...\n");
   if (compressDatabase(
     db_location + std::string("/landmarks.lms"),
     db_location + std::string("/landmarkKey.lmdb"),
     db_location + std::string("/landmarkValue.lmdb")
   )) {
-    printf("compress failed!\n");
+    LOG_FATAL("compress failed!");
     return 1;
   }
-  printf("compress database time: %.3fs\n", timing.getRunTime() * 0.001);
+  LOG_INFO("compress database time: %.3fs", timing.getRunTime() * 0.001);
   
-  printf("Total time: %.3fs\n", timing2.getRunTime() * 0.001);
+  LOG_INFO("Total time: %.3fs", timing2.getRunTime() * 0.001);
   return 0;
 }

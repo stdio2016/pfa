@@ -29,8 +29,7 @@ int processQuery(
     return which;
   }
   catch (std::runtime_error x) {
-    printf("%s\n", x.what());
-    LOG_DEBUG("%s", x.what());
+    LOG_ERROR("%s", x.what());
   }
   return -1;
 }
@@ -47,37 +46,34 @@ int main(int argc, char const *argv[]) {
     printf("cannot read query list!\n");
     return 1;
   }
+  init_logger("matcher");
   std::string line;
   std::vector<std::string> queryList;
   while (std::getline(flist, line)) {
     queryList.push_back(line);
   }
   flist.close();
-  printf("read query list %.3fs\n", timing2.getRunTime() * 0.001);
+  LOG_DEBUG("read query list %.3fs", timing2.getRunTime() * 0.001);
   
   Database db;
   if (db.load(argv[2])) {
-    printf("cannot load database\n");
+    LOG_FATAL("cannot load database");
     return 1;
   }
   int nSongs = db.songList.size();
   std::vector<int> result(queryList.size());
   std::vector<match_t> scores(queryList.size() * nSongs);
-  printf("load database %.3fs\n", timing2.getRunTime() * 0.0011);
+  LOG_DEBUG("load database %.3fs", timing2.getRunTime() * 0.0011);
   
   LandmarkBuilder builder;
-  init_logger("matcher");
-  #pragma omp parallel firstprivate(builder)
   {
     Analyzer analyzer;
     analyzer.peak_finder = new PeakFinderDejavu();
     analyzer.landmark_builder = new LandmarkBuilder();
     
-    #pragma omp for schedule(dynamic)
     for (int i = 0; i < queryList.size(); i++) {
       std::string name = queryList[i];
       LOG_DEBUG("File: %s", name.c_str());
-      fprintf(stdout, "File: %s\n", name.c_str());
       result[i] = processQuery(name, analyzer, db, &scores[i*nSongs]);
       if (result[i] >= 0 && result[i] < nSongs) {
         printf("%s\t%s\n", name.c_str(), db.songList[result[i]].c_str());
@@ -93,7 +89,7 @@ int main(int argc, char const *argv[]) {
   
   std::ofstream fout(argv[3]);
   if (!fout) {
-    printf("cannot write result!\n");
+    LOG_FATAL("cannot write result!");
     return 1;
   }
   for (int i = 0; i < queryList.size(); i++) {
@@ -112,6 +108,6 @@ int main(int argc, char const *argv[]) {
     fout.close();
   }
   
-  printf("Total time: %.3fs\n", timing.getRunTime() * 0.001);
+  LOG_INFO("Total time: %.3fs", timing.getRunTime() * 0.001);
   return 0;
 }

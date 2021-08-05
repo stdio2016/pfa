@@ -85,7 +85,7 @@ void init_logger(const char *app_name) {
 
 void mylogger(int level, const char *fmt, ...) {
   va_list ap;
-  if (!log_file) return;
+  va_list ap2;
   
   time_t start_time;
   time(&start_time);
@@ -104,9 +104,19 @@ void mylogger(int level, const char *fmt, ...) {
   #pragma omp critical(mylogger)
   {
     va_start(ap, fmt);
-    fprintf(log_file, "[%s] [thread %d/%s]: ", namebuf, omp_get_thread_num(), severity);
-    vfprintf(log_file, fmt, ap);
+    va_copy(ap2, ap);
+    if (log_file) {
+      fprintf(log_file, "[%s] [thread %d/%s]: ", namebuf, omp_get_thread_num(), severity);
+      vfprintf(log_file, fmt, ap);
+      fputc('\n', log_file);
+      fflush(log_file);
+    }
     va_end(ap);
-    fputc('\n', log_file);
+    if (level >= 2) {
+      fprintf(stderr, "[%s] [thread %d/%s]: ", namebuf, omp_get_thread_num(), severity);
+      vfprintf(stderr, fmt, ap2);
+      fputc('\n', stderr);
+    }
+    va_end(ap2);
   }
 }
