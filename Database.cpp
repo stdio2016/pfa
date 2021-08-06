@@ -55,6 +55,54 @@ int Database::load(std::string dir) {
   return 0;
 }
 
+int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, match_t *scores) {
+  #pragma omp parallel
+  {
+    // split task
+    int nthreads = omp_get_num_threads();
+    int tid = omp_get_thread_num();
+    size_t step = n / nthreads;
+    size_t start = step * tid;
+    start += std::min<size_t>(tid, n % nthreads);
+    size_t end = step * (tid+1);
+    end += std::min<size_t>(tid+1, n % nthreads);
+    // move to next song start
+    if (start != 0) {
+      while (start < n && matches[start]>>14 == matches[start-1]>>14) {
+        start++;
+      }
+    }
+    for (size_t i = start; i < end; i++) {
+      int songId = matches[i]>>14;
+      int cur = 0, prev = 0;
+      int best = 0, best_t = 0;
+      while (i < n && matches[i]>>14 == songId) {
+        int t = matches[i] & ((1<<14)-1);
+        if (matches[i] == prev) cur += 1;
+        else cur = 1;
+        if (cur > best) {
+          best = cur;
+          best_t = t;
+        }
+        prev = matches[i];
+        i += 1;
+      }
+      if (songId < nsongs) {
+        scores[songId].score = best;
+        scores[songId].offset = best_t;
+      }
+    }
+  }
+  int best = 0, which = 0;
+  for (int i = 0; i < nsongs; i++) {
+    if (scores[i].score > best) {
+      best = scores[i].score;
+      which = i;
+    }
+  }
+  return which;
+}
+
 int Database::query_landmarks(
     const std::vector<Landmark> &lms,
     match_t *out_scores
@@ -66,101 +114,52 @@ int Database::query_landmarks(
   landmark_to_hash(lms.data(), lms.size(), 0, hash.data());
   const int T1_BITS = this->T1_BITS;
 
-  const int nthreads = omp_get_max_threads();
-  std::vector<int> hist_th(nthreads * nSongs);
-  #pragma omp parallel for schedule(static,1)
+  size_t nmatches = 0;
   for (int i = 0; i < lms.size(); i++) {
-    const int tid = omp_get_thread_num();
-    int *hist_local = &hist_th[tid * nSongs];
     uint32_t key = hash[i*2];
-    for (uint64_t it = db_key[key]; it < db_key[key+1]; it++) {
-      uint32_t val = db_val[it];
-      uint32_t songId = val>>T1_BITS;
-      if (songId < nSongs) hist_local[songId] += 1;
-    }
+    nmatches += db_key[key+1] - db_key[key];
   }
-  for (int i = 0; i < nthreads; i++)
-    for (int j = 0; j < nSongs; j++)
-      hist[j] += hist_th[i * nSongs + j];
-  LOG_DEBUG("compute histogram %.3fms", tm.getRunTime());
-  // counting sort
-  for (int i = nSongs; i > 0; i--) hist[i] = hist[i-1];
-  hist[0] = 0;
-  for (int i = 0; i < nSongs; i++) hist[i+1] += hist[i];
-
-  for (int i = 0; i < nSongs; i++) {
-    int prev = hist_th[i] + hist[i];
-    hist_th[i] = hist[i];
-    for (int j = 1; j < nthreads; j++) {
-      int t = hist_th[j * nSongs + i];
-      hist_th[j * nSongs + i] = prev;
-      prev = t + prev;
-    }
-  }
-  
-  std::vector<int> matches(hist[nSongs]);
-  #pragma omp parallel for schedule(static,1)
-  for (int i = 0; i < lms.size(); i++) {
-    const int tid = omp_get_thread_num();
-    int *hist_local = &hist_th[tid * nSongs];
-    int t = hash[i*2+1];
-    uint32_t key = hash[i*2];
-    
-    for (uint64_t it = db_key[key]; it < db_key[key+1]; it++) {
-      uint32_t val = db_val[it];
-      uint32_t songId = val>>T1_BITS;
-      int songT = val & ((1<<T1_BITS)-1);
-      if (songId < nSongs) {
-        int pos = hist_local[songId];
-        matches[pos] = songT - t;
-        hist_local[songId] += 1;
-      }
-    }
-  }
-  LOG_DEBUG("counting sort %.3fms items %d", tm.getRunTime(), hist[nSongs]);
-  
-  //for (int i = nSongs; i > 0; i--) hist[i] = hist[i-1];
-  hist[0] = 0;
-  int all_song_score = 0;
-  int which = 0;
+  // matched landmark timepoints, multithread initialize
+  // cannot use std::vector as it is slow to initialize array twice
+  uint32_t *matches = new uint32_t[nmatches];
+  size_t pos = 0;
   #pragma omp parallel
   {
-  int my_song_score = 0;
-  int my_which = 0;
-  #pragma omp for schedule(static,16)
-  for (int i = 0; i < nSongs; i++) {
-    std::sort(&matches[hist[i]], &matches[hist[i+1]]);
-    int prev = 0, best_offset = 0;
-    int score = 0, max_score = 0;
-    for (int j = hist[i]; j < hist[i+1]; j++) {
-      int t_meet = matches[j];
-      if (prev == t_meet)
-        score += 1;
-      else
-        score = 1;
-      if (score > max_score) {
-        max_score = score;
-        best_offset = t_meet;
+    size_t my_pos = 0;
+    #pragma omp for schedule(static)
+    for (int i = 0; i < lms.size(); i++) {
+      uint32_t key = hash[i*2];
+      my_pos += db_key[key+1] - db_key[key];
+    }
+    #pragma omp critical
+    {
+      size_t tmp = pos;
+      pos += my_pos;
+      my_pos = tmp;
+    }
+    #pragma omp for schedule(static)
+    for (int i = 0; i < lms.size(); i++) {
+      uint32_t key = hash[i*2];
+      uint32_t t = hash[i*2+1];
+      for (uint64_t it = db_key[key]; it < db_key[key+1]; it++) {
+        uint32_t val = db_val[it];
+        uint32_t songId = val>>T1_BITS;
+        uint32_t songT = (val - t) & ((1<<T1_BITS)-1);
+        if (songId < nSongs) matches[my_pos++] = songId<<T1_BITS | songT;
       }
-      prev = t_meet;
-    }
-    if (out_scores) {
-      out_scores[i].offset = best_offset;
-      out_scores[i].score = max_score;
-    }
-    if (max_score > my_song_score) {
-      my_song_score = max_score;
-      my_which = i;
     }
   }
-  #pragma omp critical
-  if (my_song_score > all_song_score) {
-    all_song_score = my_song_score;
-    which = my_which;
-  }
-  }
-  LOG_DEBUG("sort by time %.3fms", tm.getRunTime());
+  LOG_DEBUG("collecting matches %.3fms items %zd", tm.getRunTime(), nmatches);
+  
+  radix_sort_uint_omp(matches, nmatches);
+  LOG_DEBUG("radix sort %.3fms", tm.getRunTime(), hist[nSongs]);
+  
+  int which = score_song_sorted(matches, nmatches, nSongs, out_scores);
+  int all_song_score = 0;
+  if (which >= 0 && which < nSongs) all_song_score = out_scores[which].score;
+  LOG_DEBUG("score matches %.3fms", tm.getRunTime());
   LOG_DEBUG("best match: %d score=%d", which, all_song_score);
+  delete[] matches;
   return which;
 }
 
