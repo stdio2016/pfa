@@ -69,7 +69,7 @@ int Database::query_landmarks(
   const int nthreads = omp_get_max_threads();
   std::vector<int> hist_th(nthreads * nSongs);
   #pragma omp parallel for schedule(static,1)
-  for (size_t i = 0; i < lms.size(); i++) {
+  for (int i = 0; i < lms.size(); i++) {
     const int tid = omp_get_thread_num();
     int *hist_local = &hist_th[tid * nSongs];
     uint32_t key = hash[i*2];
@@ -100,7 +100,7 @@ int Database::query_landmarks(
   
   std::vector<int> matches(hist[nSongs]);
   #pragma omp parallel for schedule(static,1)
-  for (size_t i = 0; i < lms.size(); i++) {
+  for (int i = 0; i < lms.size(); i++) {
     const int tid = omp_get_thread_num();
     int *hist_local = &hist_th[tid * nSongs];
     int t = hash[i*2+1];
