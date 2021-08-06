@@ -39,7 +39,6 @@ int main(int argc, char const *argv[]) {
     printf("Usage: ./matcher <query list> <database dir> <result file>\n");
     return 1;
   }
-  omp_set_num_threads(1);
   Timing timing, timing2;
   std::ifstream flist(argv[1]);
   if (!flist) {
@@ -60,9 +59,22 @@ int main(int argc, char const *argv[]) {
     LOG_FATAL("cannot load database");
     return 1;
   }
+
   int nSongs = db.songList.size();
+  std::ofstream fout(argv[3]);
+  if (!fout) {
+    LOG_FATAL("cannot write result!");
+    return 1;
+  }
+
+  std::ofstream fout_bin( argv[3] + std::string(".bin"), std::ios::binary );
+  if (!fout_bin) {
+    LOG_FATAL("cannot write result!");
+    return 1;
+  }
+
   std::vector<int> result(queryList.size());
-  std::vector<match_t> scores(queryList.size() * nSongs);
+  std::vector<match_t> scores(nSongs);
   LOG_DEBUG("load database %.3fs", timing2.getRunTime() * 0.0011);
   
   LandmarkBuilder builder;
@@ -75,39 +87,25 @@ int main(int argc, char const *argv[]) {
     for (int i = 0; i < queryList.size(); i++) {
       std::string name = queryList[i];
       LOG_DEBUG("File: %s", name.c_str());
-      result[i] = processQuery(name, analyzer, db, &scores[i*nSongs]);
+      result[i] = processQuery(name, analyzer, db, scores.data());
       if (result[i] >= 0 && result[i] < nSongs) {
         printf("%s\t%s\n", name.c_str(), db.songList[result[i]].c_str());
+        fout << queryList[i] << '\t' << db.songList[result[i]] << '\n';
       }
       else {
         printf("%s\t%s\n", name.c_str(), "error");
+        fout << queryList[i] << '\t' << "error\n";
       }
+      fout.flush();
+      fout_bin.write((char*)scores.data(), sizeof(scores[0]) * scores.size());
+      fout_bin.flush();
     }
     
     delete analyzer.peak_finder;
     delete analyzer.landmark_builder;
   }
-  
-  std::ofstream fout(argv[3]);
-  if (!fout) {
-    LOG_FATAL("cannot write result!");
-    return 1;
-  }
-  for (int i = 0; i < queryList.size(); i++) {
-    fout << queryList[i] << '\t';
-    if (result[i] >= 0 && result[i] < nSongs)
-      fout << db.songList[result[i]];
-    else
-      fout << "error";
-    fout << '\n';
-  }
   fout.close();
-  
-  fout.open( argv[3] + std::string(".bin"), std::ios::binary );
-  if (fout) {
-    fout.write((char*)(&scores[0]), sizeof(scores[0]) * scores.size());
-    fout.close();
-  }
+  fout_bin.close();
   
   LOG_INFO("Total time: %.3fs", timing.getRunTime() * 0.001);
   return 0;
