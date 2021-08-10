@@ -20,7 +20,8 @@ public:
   
   std::vector<uint64_t> db_key;
   
-  std::vector<uint32_t> db_val;
+  // use raw pointer to support memory map and pinned memory
+  uint32_t *db_val;
   
   int load(std::string dir);
   
@@ -41,12 +42,12 @@ void radix_sort_uint_omp(T *data, size_t n) {
   // 280 to prevent false sharing
   size_t *cntall = new size_t[nthreads * 280];
   for (int bt = 0; bt < sizeof(T); bt++) {
+    // zero out counters
+    for (int i = 0; i < nthreads * 280; i++) cntall[i] = 0;
     #pragma omp parallel
     {
       const int tid = omp_get_thread_num();
       size_t *cnt = &cntall[tid * 280];
-      for (int i = 0; i < 256; i++)
-        cnt[i] = 0;
       #pragma omp for schedule(static)
       for (long long i = 0; i < n; i++) {
         int key = data[i]>>(bt*8) & 0xff;

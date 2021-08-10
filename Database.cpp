@@ -40,7 +40,7 @@ int Database::load(std::string dir) {
   fin.close();
   LOG_DEBUG("keys = %lld", (long long) db_key[key_n]);
   
-  db_val.resize(sum);
+  db_val = new uint32_t[sum];
   fin.open(dir + "/landmarkValue", std::ifstream::binary);
   if (!fin) {
     LOG_FATAL("cannot read landmarkValue!");
@@ -49,13 +49,13 @@ int Database::load(std::string dir) {
   uint64_t ptr = 0;
   while (ptr < sum) {
     int maxread = std::min<uint64_t>(sum - ptr, 10000000ULL);
-    fin.read((char*)(db_val.data() + ptr), maxread * sizeof(uint32_t));
+    fin.read((char*)(db_val + ptr), maxread * sizeof(uint32_t));
     ptr += maxread;
   }
   return 0;
 }
 
-int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, match_t *scores) {
+static int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, match_t *scores) {
   #pragma omp parallel
   {
     // split task
