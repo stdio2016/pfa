@@ -31,7 +31,7 @@ void processMusic(std::string name, Analyzer &analyzer,
   Timing tm;
   try {
     std::vector<Landmark> lms = analyzer.fingerprint_file(name.c_str());
-    LOG_DEBUG("create landmark pairs %.3fms", tm.getRunTime());
+    tm.getRunTime();
     
     std::string shortname = name;
     if (shortname.find('/') != shortname.npos) {

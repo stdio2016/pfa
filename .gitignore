@@ -17,12 +17,16 @@ qbshServer
 
 # landmark of multiple songs
 *.lms
+tmp_*_*Key
+tmp_*_*Value
 
 # landmark database file
 *.lmdb
 songList.txt
 songNameList.txt
 songSrcList.txt
+landmarkKey
+landmarkValue
 
 # python cache
 *.pyc

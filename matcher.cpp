@@ -39,7 +39,7 @@ int main(int argc, char const *argv[]) {
     printf("Usage: ./matcher <query list> <database dir> <result file>\n");
     return 1;
   }
-  Timing timing, timing2;
+  Timing timing;
   std::ifstream flist(argv[1]);
   if (!flist) {
     printf("cannot read query list!\n");
@@ -52,7 +52,7 @@ int main(int argc, char const *argv[]) {
     queryList.push_back(line);
   }
   flist.close();
-  LOG_DEBUG("read query list %.3fs", timing2.getRunTime() * 0.001);
+  LOG_DEBUG("read query list %.3fs", timing.getRunTime() * 0.001);
   
   Database db;
   if (db.load(argv[2])) {
@@ -75,7 +75,7 @@ int main(int argc, char const *argv[]) {
 
   std::vector<int> result(queryList.size());
   std::vector<match_t> scores(nSongs);
-  LOG_DEBUG("load database %.3fs", timing2.getRunTime() * 0.0011);
+  LOG_DEBUG("load database %.3fs", timing.getRunTime() * 0.001);
   
   LandmarkBuilder builder;
   {
@@ -89,11 +89,14 @@ int main(int argc, char const *argv[]) {
       LOG_DEBUG("File: %s", name.c_str());
       result[i] = processQuery(name, analyzer, db, scores.data());
       if (result[i] >= 0 && result[i] < nSongs) {
-        printf("%s\t%s\n", name.c_str(), db.songList[result[i]].c_str());
+        int score = scores[result[i]].score;
+        int hop = analyzer.peak_finder->FFT_SIZE - analyzer.peak_finder->NOVERLAP;
+        double match_time = double(scores[result[i]].offset) * hop / analyzer.SAMPLE_RATE;
+        LOG_INFO("%s\t%s\tscore=%d\ttime=%.2f", name.c_str(), db.songList[result[i]].c_str(), score, match_time);
         fout << queryList[i] << '\t' << db.songList[result[i]] << '\n';
       }
       else {
-        printf("%s\t%s\n", name.c_str(), "error");
+        LOG_ERROR("error querying %s", name.c_str());
         fout << queryList[i] << '\t' << "error\n";
       }
       fout.flush();

@@ -112,6 +112,7 @@ int Database::query_landmarks(
   std::vector<int> hist(nSongs+1);
   std::vector<uint32_t> hash(lms.size() * 2);
   landmark_to_hash(lms.data(), lms.size(), 0, hash.data());
+  LOG_DEBUG("landmark_to_hash %.3fms", tm.getRunTime());
   const int T1_BITS = this->T1_BITS;
 
   size_t nmatches = 0;
@@ -158,7 +159,6 @@ int Database::query_landmarks(
   int all_song_score = 0;
   if (which >= 0 && which < nSongs) all_song_score = out_scores[which].score;
   LOG_DEBUG("score matches %.3fms", tm.getRunTime());
-  LOG_DEBUG("best match: %d score=%d", which, all_song_score);
   delete[] matches;
   return which;
 }
