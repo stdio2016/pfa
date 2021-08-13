@@ -67,6 +67,13 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
+  std::ofstream fout_csv(argv[3] + std::string(".csv"));
+  if (!fout_csv) {
+    LOG_FATAL("cannot write result!");
+    return 1;
+  }
+  fout_csv << "query,answer,score,time,part_scores\n";
+
   std::ofstream fout_bin( argv[3] + std::string(".bin"), std::ios::binary );
   if (!fout_bin) {
     LOG_FATAL("cannot write result!");
@@ -94,12 +101,15 @@ int main(int argc, char const *argv[]) {
         double match_time = double(scores[result[i]].offset) * hop / analyzer.SAMPLE_RATE;
         LOG_INFO("%s\t%s\tscore=%d\ttime=%.2f", name.c_str(), db.songList[result[i]].c_str(), score, match_time);
         fout << queryList[i] << '\t' << db.songList[result[i]] << '\n';
+        fout_csv << queryList[i] << ',' << db.songList[result[i]] << ',' << score << ',' << match_time << ',' << '\n';
       }
       else {
         LOG_ERROR("error querying %s", name.c_str());
         fout << queryList[i] << '\t' << "error\n";
+        fout_csv << queryList[i] << ",error,0,0,\n";
       }
       fout.flush();
+      fout_csv.flush();
       fout_bin.write((char*)scores.data(), sizeof(scores[0]) * scores.size());
       fout_bin.flush();
     }
