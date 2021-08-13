@@ -6,7 +6,7 @@
 class Analyzer {
 public:
   // parameters
-  int SAMPLE_RATE = 8820;
+  int SAMPLE_RATE = 8000;
   int REPEAT_COUNT = 1;
   
   PeakFinder *peak_finder;
