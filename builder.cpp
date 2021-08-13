@@ -117,6 +117,7 @@ int merge_db(std::vector<std::string> filenames, std::string out_file) {
   int key_count = 1<<24;
   int bufsize = 20000000;
   int nfiles = filenames.size();
+  int has_error = 0;
   std::string out_key = out_file + "Key";
   FILE *fout = fopen(out_key.c_str(), "wb");
   if (!fout) {
@@ -134,7 +135,7 @@ int merge_db(std::vector<std::string> filenames, std::string out_file) {
     }
     sub_cnt.push_back(std::vector<uint32_t>(key_count, 0));
     char buf[4] = {0};
-    fread(buf, 4, 1, fin);
+    if (fread(buf, 4, 1, fin) != 1) has_error = 1;
     if (memcmp(buf, "keys", 4) == 0) {
       std::vector<uint32_t> buf2(1000);
       int nread = 0;
@@ -145,7 +146,8 @@ int merge_db(std::vector<std::string> filenames, std::string out_file) {
       }
     }
     else if (memcmp(buf, "dens", 4) == 0) {
-      fread((char *)sub_cnt[i].data(), sizeof(uint32_t), key_count, fin);
+      if (fread((char *)sub_cnt[i].data(), sizeof(uint32_t), key_count, fin) != key_count)
+        has_error = 1;
     }
     fclose(fin);
     for (int j = 0; j < key_count; j++) {
@@ -178,7 +180,8 @@ int merge_db(std::vector<std::string> filenames, std::string out_file) {
         size_t need = 0;
         for (int j = prev; j < current; j++) need += sub_cnt[i][j];
         bufs.push_back(std::vector<uint32_t>(need));
-        fread((char *)bufs[i].data(), sizeof(uint32_t), need, files[i]);
+        if (fread((char *)bufs[i].data(), sizeof(uint32_t), need, files[i]) != need)
+          has_error = 1;
       }
       std::vector<size_t> pos(nfiles);
       for (int j = prev; j < current; j++) {
@@ -195,7 +198,7 @@ int merge_db(std::vector<std::string> filenames, std::string out_file) {
     fclose(fin);
   }
   fclose(fout);
-  return 0;
+  return has_error;
 }
 
 int compressDatabase(
