@@ -291,7 +291,7 @@ int main(int argc, char const *argv[]) {
       LOG_INFO("File: %s", name.c_str());
       processMusic(name, analyzer, db_config, db, i);
       long long nentries = db.size();
-      long long maxentries = 20000 * 1000; // 20M entries ~ 160MB
+      long long maxentries = 50000 * 1000; // 50M entries ~ 400MB
       if (nentries > maxentries) {
         Timing tt;
         dumpCount[tid] += 1;

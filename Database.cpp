@@ -146,7 +146,7 @@ int Database::query_landmarks(
         uint32_t val = db_val[it];
         uint32_t songId = val>>T1_BITS;
         uint32_t songT = (val - t) & ((1<<T1_BITS)-1);
-        if (songId < nSongs) matches[my_pos++] = songId<<T1_BITS | songT;
+        matches[my_pos++] = songId<<T1_BITS | songT;
       }
     }
   }
