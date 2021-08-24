@@ -19,6 +19,9 @@ builder: builder.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 matcher: matcher.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) matcher.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
 
+getlm: getlm.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
+	$(CXX) $(CXXFLAGS) getlm.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
+
 matchServer: matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) -o $@ $(LIBS)
 

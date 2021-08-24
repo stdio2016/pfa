@@ -18,11 +18,16 @@ int main(int argc, char *argv[]) {
   PeakFinder *peakfinder = new PeakFinderDejavu;
   LandmarkBuilder *lmbuilder = new LandmarkBuilder;
   
+  int extractpeak = 0;
   if (argc > 3) {
-    sscanf(argv[3], "%d", &analyzer.REPEAT_COUNT);
-    if (analyzer.REPEAT_COUNT > 10 || analyzer.REPEAT_COUNT < 1) {
-      printf("REPEAT_COUNT must be 1 ~ 10\n");
-      return 1;
+    if (sscanf(argv[3], "%d", &analyzer.REPEAT_COUNT) == 1) {
+      if (analyzer.REPEAT_COUNT > 10 || analyzer.REPEAT_COUNT < 1) {
+        printf("REPEAT_COUNT must be 1 ~ 10\n");
+        return 1;
+      }
+    }
+    else if (argv[3] == std::string("peaks")) {
+      extractpeak = 1;
     }
   }
   
@@ -39,7 +44,12 @@ int main(int argc, char *argv[]) {
     std::vector<Landmark> lms = analyzer.fingerprint_file(argv[1]);
     printf("File contains %zd landmarks and %zd peaks\n", lms.size(), analyzer.peaks.size());
     
-    fout.write((const char *)lms.data(), lms.size() * sizeof(lms[0]));
+    if (extractpeak) {
+      fout.write((const char *)analyzer.peaks.data(), analyzer.peaks.size() * sizeof(Peak));
+    }
+    else {
+      fout.write((const char *)lms.data(), lms.size() * sizeof(lms[0]));
+    }
   }
   catch (std::runtime_error &err) {
     printf("%s\n", err.what());
