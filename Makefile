@@ -22,6 +22,9 @@ matcher: matcher.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 getlm: getlm.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) getlm.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
 
+finddup: finddup.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
+	mpic++ $(CXXFLAGS) finddup.cpp Landmark.cpp  Database.cpp $(MYLIB) -o $@ $(LIBS)
+
 matchServer: matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADERS)
 	$(CXX) $(CXXFLAGS) matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) -o $@ $(LIBS)
 

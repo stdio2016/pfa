@@ -6,6 +6,8 @@
 
 builder
 matcher
+getlm
+finddup
 matchServer
 qbshServer
 
