@@ -58,6 +58,13 @@ int Database::load(std::string dir) {
 static int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, match_t *scores) {
   #pragma omp parallel
   {
+    // initialize
+    #pragma omp for
+    for (int i = 0; i < nsongs; i++) {
+      scores[i].score = 0;
+      scores[i].offset = 0;
+    }
+
     // split task
     int nthreads = omp_get_num_threads();
     int tid = omp_get_thread_num();
