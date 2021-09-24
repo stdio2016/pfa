@@ -96,10 +96,18 @@ int main(int argc, char const *argv[]) {
       LOG_DEBUG("File: %s", name.c_str());
       result[i] = processQuery(name, analyzer, db, scores.data());
       if (result[i] >= 0 && result[i] < nSongs) {
-        int score = scores[result[i]].score;
+        double score = scores[result[i]].score;
         int hop = analyzer.peak_finder->FFT_SIZE - analyzer.peak_finder->NOVERLAP;
-        double match_time = double(scores[result[i]].offset) * hop / analyzer.SAMPLE_RATE;
-        LOG_INFO("%s\t%s\tscore=%d\ttime=%.2f", name.c_str(), db.songList[result[i]].c_str(), score, match_time);
+        double framesecs = double(hop) / analyzer.SAMPLE_RATE;
+        for (int j = 0; j < nSongs; j++) {
+          double guess = (scores[j].offset - (1<<db.T1_BITS)) * framesecs;
+          if (guess < -6) {
+            guess = scores[j].offset * framesecs;
+          }
+          scores[j].offset = guess; 
+        }
+        double match_time = scores[result[i]].offset;
+        LOG_INFO("%s\t%s\tscore=%f\ttime=%.2f", name.c_str(), db.songList[result[i]].c_str(), score, match_time);
         fout << queryList[i] << '\t' << db.songList[result[i]] << '\n';
         fout_csv << queryList[i] << ',' << db.songList[result[i]] << ',' << score << ',' << match_time << ',' << '\n';
       }

@@ -55,7 +55,7 @@ int Database::load(std::string dir) {
   return 0;
 }
 
-static int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, match_t *scores) {
+static int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, match_t *scores, double num_lms) {
   #pragma omp parallel
   {
     // initialize
@@ -95,12 +95,13 @@ static int score_song_sorted(const uint32_t *matches, size_t n, int nsongs, matc
         i += 1;
       }
       if (songId < nsongs) {
-        scores[songId].score = best;
+        scores[songId].score = best / num_lms;
         scores[songId].offset = best_t;
       }
     }
   }
-  int best = 0, which = 0;
+  double best = 0;
+  int which = 0;
   for (int i = 0; i < nsongs; i++) {
     if (scores[i].score > best) {
       best = scores[i].score;
@@ -162,7 +163,7 @@ int Database::query_landmarks(
   radix_sort_uint_omp(matches, nmatches);
   LOG_DEBUG("radix sort %.3fms", tm.getRunTime(), hist[nSongs]);
   
-  int which = score_song_sorted(matches, nmatches, nSongs, out_scores);
+  int which = score_song_sorted(matches, nmatches, nSongs, out_scores, lms.size());
   int all_song_score = 0;
   if (which >= 0 && which < nSongs) all_song_score = out_scores[which].score;
   LOG_DEBUG("score matches %.3fms", tm.getRunTime());
