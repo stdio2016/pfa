@@ -44,6 +44,7 @@ int Nthreads = 0;
 struct ThreadParam {
   SOCKET socket;
   PitchDatabase *db;
+  unsigned int fake_tid;
 };
 
 int processQuery(
@@ -167,7 +168,7 @@ void *threadRunner(void *arg) {
     }
   }
   
-  printf("tid %d disconnected\n", (int)pthread_self());
+  printf("tid %u disconnected\n", param->fake_tid);
   closesocket(param->socket);
   delete param;
   pthread_mutex_lock(&Nthreads_mutex);
@@ -181,6 +182,7 @@ int main(int argc, char const *argv[]) {
   int port = 1605;
   int LISTENQ = 5;
   int MAX_THREADS = 2;
+  unsigned int fake_tid = 0;
 
   int ret;
   
@@ -271,9 +273,10 @@ int main(int argc, char const *argv[]) {
         ThreadParam *param = new ThreadParam;
         param->socket = f;
         param->db = &db;
+        param->fake_tid = ++fake_tid;
         pthread_create(&tid, NULL, threadRunner, param);
         pthread_detach(tid);
-        printf("connected from %s:%d tid %d\n", ip.c_str(), ntohs(clientInfo.sin_port), (int)tid);
+        printf("connected from %s:%d tid %u\n", ip.c_str(), ntohs(clientInfo.sin_port), param->fake_tid);
       }
       else {
         printf("too many connections\n");

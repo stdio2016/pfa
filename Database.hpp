@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <omp.h>
 #include "Landmark.hpp"
 
 struct match_t {

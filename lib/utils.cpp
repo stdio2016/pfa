@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <cstring>
 #include <stdio.h>
 #include <ctime>

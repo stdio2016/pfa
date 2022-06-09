@@ -29,4 +29,7 @@ matchServer: matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) Makefile $(HEADE
 	$(CXX) $(CXXFLAGS) matchServer.cpp Landmark.cpp Database.cpp $(MYLIB) -o $@ $(LIBS)
 
 qbshServer: qbshServer.cpp PitchDatabase.cpp $(MYLIB) Makefile $(HEADERS)
-	$(CXX) $(CXXFLAGS) qbshServer.cpp lib/Pitch.cpp PitchDatabase.cpp $(MYLIB) -o $@ $(LIBS)
+	$(CXX) $(CXXFLAGS) qbshServer.cpp PitchDatabase.cpp Landmark.cpp $(MYLIB) -o $@ $(LIBS)
+
+# finddup and qbshServer are not used in my thesis
+all: builder matcher getlm

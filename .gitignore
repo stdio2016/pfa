@@ -3,6 +3,7 @@
 *.out
 *.wav
 *.obj
+.DS_Store
 
 builder
 matcher
