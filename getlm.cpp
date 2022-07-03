@@ -55,6 +55,11 @@ int main(int argc, char *argv[]) {
     printf("%s\n", err.what());
   }
   
+  fout.close();
+  // output spectrogram for demonstration
+  fout.open("test", std::ios::binary);
+  fout.write(reinterpret_cast<char*>(peakfinder->spec.data()), peakfinder->spec.size() * sizeof(double));
+  
   delete peakfinder;
   delete lmbuilder;
 }
