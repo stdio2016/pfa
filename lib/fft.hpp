@@ -175,8 +175,8 @@ void FFT<F>::realIFFT(const F* din, F* dout) const {
   unsigned n = N;
   a = din[0];
   b = din[1];
-  dout[0] = (a + b) * 0.5;
-  dout[1] = (a - b) * 0.5;
+  dout[0] = (a + b);
+  dout[1] = (a - b);
   for (unsigned k = 1; k < n/2; k++) {
     F kr = din[k*2];
     F ki = din[k*2+1];
@@ -186,20 +186,19 @@ void FFT<F>::realIFFT(const F* din, F* dout) const {
     F cos = trig[(n+k)*2];
     F sin = trig[(n+k)*2+1];
     
-    F half = 0.5;
-    a = (kr - nr) * half;
-    b = (ki + ni) * half;
+    a = (kr - nr);
+    b = (ki + ni);
     c = a * cos - b * sin;
     d = a * sin + b * cos;
-    a = (kr + nr) * half;
-    b = (ki - ni) * half;
+    a = (kr + nr);
+    b = (ki - ni);
     
     dout[k*2] = a - d;
     dout[k*2+1] = b + c;
     dout[(n-k)*2] = a + d;
     dout[(n-k)*2+1] = c - b;
   }
-  dout[n] = din[n];
-  dout[n+1] = -din[n+1];
+  dout[n] = din[n] * 2;
+  dout[n+1] = -din[n+1] * 2;
   transform(dout, dout, true);
 }
