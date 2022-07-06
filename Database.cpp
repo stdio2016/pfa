@@ -2,6 +2,7 @@
 #include <fstream>
 #include <omp.h>
 #include <string>
+#include <stdio.h>
 #include "Database.hpp"
 #include "lib/Timing.hpp"
 #include "lib/utils.hpp"
@@ -23,7 +24,8 @@ int Database::load(std::string dir) {
   
   int key_n = 1<<24;
   db_key.resize(key_n + 1);
-  std::ifstream fin(dir + "/landmarkKey", std::ifstream::binary);
+  std::string landmarkKeyPath = dir + "/landmarkKey";
+  FILE *fin = fopen(landmarkKeyPath.c_str(), "rb");
   if (!fin) {
     LOG_FATAL("cannot read landmarkKey!");
     return 1;
@@ -31,17 +33,18 @@ int Database::load(std::string dir) {
   uint64_t sum = 0;
   {
     std::vector<uint32_t> tmp(key_n);
-    fin.read((char *)tmp.data(), sizeof(uint32_t) * key_n);
+    fread((char *)tmp.data(), key_n, sizeof(uint32_t), fin);
     for (int i = 0; i < key_n; i++) {
       sum += tmp[i];
       db_key[i+1] = sum;
     }
   }
-  fin.close();
+  fclose(fin);
   LOG_DEBUG("keys = %lld", (long long) db_key[key_n]);
   
   db_val = new uint32_t[sum];
-  fin.open(dir + "/landmarkValue", std::ifstream::binary);
+  std::string landmarkValuePath = dir + "/landmarkValue";
+  fin = fopen(landmarkValuePath.c_str(), "rb");
   if (!fin) {
     LOG_FATAL("cannot read landmarkValue!");
     return 1;
@@ -49,9 +52,10 @@ int Database::load(std::string dir) {
   uint64_t ptr = 0;
   while (ptr < sum) {
     int maxread = std::min<uint64_t>(sum - ptr, 10000000ULL);
-    fin.read((char*)(db_val + ptr), maxread * sizeof(uint32_t));
+    fread((char*)(db_val + ptr), sizeof(uint32_t), maxread, fin);
     ptr += maxread;
   }
+  fclose(fin);
   return 0;
 }
 
