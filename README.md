@@ -147,11 +147,12 @@ You need to first preprocess music:
 3. Save each `$out_peak_file` name to a file `$peak_file_list`.
 
 The program will output to `${result_file}-pid-${pid}`, for each process `$pid`.
-They are CSV files with 22 fields, without header.
+They are CSV files with 32 fields, without header.
 Each row corresponds to a clip of music.
 * Field 1: music id (0-based)
 * Field 2: position of clip in that music, in seconds
-* Field 2n + 1: n-th best music match
-* Field 2n + 2: the time when the query clip starts in the matched music
+* Field 3n: n-th best music match
+* Field 3n + 1: landmark match count
+* Field 3n + 2: the time when the query clip starts in the matched music
 
 The program only outputs top-10 matches to save space.
